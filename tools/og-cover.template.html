@@ -1,0 +1,97 @@
+<!--
+  Source for assets/img/og-cover.jpg (the 1200x630 social preview).
+
+  To regenerate after a data or branding change:
+    1. npm start
+    2. open http://127.0.0.1:5177/tools/og-cover.template.html
+    3. screenshot the 1200x630 viewport to assets/img/og-cover.jpg
+
+  The numbers below are copied from data/build-report.json — keep them in sync.
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Plex AR";
+        src: url("http://127.0.0.1:5177/assets/fonts/plex-ar-700.woff2") format("woff2");
+        font-weight: 700;
+      }
+      @font-face {
+        font-family: "Plex AR";
+        src: url("http://127.0.0.1:5177/assets/fonts/plex-ar-400.woff2") format("woff2");
+        font-weight: 400;
+      }
+      * { margin: 0; box-sizing: border-box; }
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 56px;
+        padding: 0 84px;
+        background: #101828;
+        background-image:
+          radial-gradient(60% 120% at 88% -10%, rgba(201, 161, 111, 0.24), transparent 60%),
+          radial-gradient(70% 120% at 6% 110%, rgba(122, 34, 41, 0.34), transparent 62%);
+        color: #eef1f6;
+        font-family: "Plex AR", "Segoe UI", sans-serif;
+      }
+      .rule {
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline: 0;
+        height: 8px;
+        background: linear-gradient(90deg, #7a2229, #b4854f 55%, #c9a16f);
+      }
+      .logo { width: 250px; height: 250px; object-fit: contain; flex: none; }
+      .copy { min-width: 0; }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 20px;
+        margin-block-end: 26px;
+        border: 1px solid rgba(201, 161, 111, 0.45);
+        border-radius: 999px;
+        font-size: 22px;
+        color: #ddb478;
+      }
+      .eyebrow::before {
+        content: "";
+        width: 10px; height: 10px; border-radius: 50%; background: #c9a16f;
+      }
+      h1 { font-size: 68px; line-height: 1.18; letter-spacing: -0.02em; font-weight: 700; }
+      h1 em { font-style: normal; color: #e08d97; }
+      p.lead { margin-block-start: 20px; font-size: 27px; line-height: 1.5; color: #aab4c6; font-weight: 400; }
+      .stats { display: flex; gap: 40px; margin-block-start: 36px; }
+      .stat b { display: block; font-size: 42px; font-weight: 700; letter-spacing: -0.02em; }
+      .stat span { font-size: 20px; color: #8b95a8; font-weight: 400; }
+      .teacher {
+        position: absolute;
+        inset-block-end: 40px;
+        inset-inline-start: 84px;
+        font-size: 21px;
+        color: #8b95a8;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="rule"></div>
+    <img class="logo" src="http://127.0.0.1:5177/assets/img/logo-256.png" alt="" />
+    <div class="copy">
+      <span class="eyebrow">تجميعات اللفظي · نماذج إلكترونية</span>
+      <h1>كل نماذج التجميعات<br /><em>في مكان واحد</em></h1>
+      <p class="lead">ابحث عن النموذج باسمه أو برقمه، وابدأ الاختبار مباشرة.</p>
+      <div class="stats">
+        <div class="stat"><b>301</b><span>نموذج اختبار</span></div>
+        <div class="stat"><b>3,913</b><span>سؤالًا</span></div>
+        <div class="stat"><b>13</b><span>سؤالًا لكل نموذج</span></div>
+      </div>
+    </div>
+    <p class="teacher">العِراب في القدرات — الأستاذ / أحمد طلعت ربيع</p>
+  </body>
+</html>

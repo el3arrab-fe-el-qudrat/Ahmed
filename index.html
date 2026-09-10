@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>العِراب في القدرات — نماذج تجميعات اللفظي</title>
+    <meta
+      name="description"
+      content="منصة نماذج تجميعات اللفظي للأستاذ أحمد طلعت ربيع. ابحث عن النموذج بالاسم أو بالرقم وابدأ الاختبار مباشرة — أكثر من ٣٠٠ نموذج إلكتروني في مكان واحد."
+    />
+    <meta name="theme-color" content="#182234" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="canonical" href="__SITE_URL__" />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="العِراب في القدرات" />
+    <meta property="og:locale" content="ar_SA" />
+    <meta property="og:title" content="العِراب في القدرات — نماذج تجميعات اللفظي" />
+    <meta
+      property="og:description"
+      content="ابحث عن نموذج التجميعات بالاسم أو بالرقم وابدأ الاختبار مباشرة. أكثر من ٣٠٠ نموذج إلكتروني في مكان واحد."
+    />
+    <meta property="og:url" content="__SITE_URL__" />
+    <meta property="og:image" content="__SITE_URL__assets/img/og-cover.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="شعار العِراب في القدرات" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Icons / manifest -->
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+    <link rel="manifest" href="site.webmanifest" />
+
+    <!-- Fonts are self-hosted; preload only what the first screen needs. -->
+    <link
+      rel="preload"
+      href="assets/fonts/plex-ar-400.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="assets/fonts/plex-ar-700.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <link rel="stylesheet" href="assets/css/tokens.css" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+
+    <link rel="preload" href="assets/data/exams.json" as="fetch" crossorigin />
+
+    <script>
+      /* Apply the saved theme before first paint to avoid a flash. */
+      try {
+        var t = localStorage.getItem('arrab-qudurat:theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "EducationalOrganization",
+        "name": "العِراب في القدرات",
+        "description": "نماذج تجميعات اللفظي لاختبار القدرات العامة — الأستاذ أحمد طلعت ربيع.",
+        "url": "__SITE_URL__",
+        "logo": "__SITE_URL__assets/img/logo-256.png",
+        "inLanguage": "ar",
+        "founder": { "@type": "Person", "name": "أحمد طلعت ربيع" }
+      }
+    </script>
+
+    <script>
+      /* The absolute site URL is stamped in at deploy time by
+         tools/set-site-url.mjs (the GitHub Actions workflow runs it with the
+         real Pages URL). If that step was skipped, resolve the placeholder
+         against the address actually being served so canonical/OG links are
+         still correct rather than literal "__SITE_URL__".
+         Note: crawlers that never run JS read the raw HTML, so always run
+         `npm run set-url <url>` before publishing outside the workflow. */
+      (function () {
+        var MARK = '__' + 'SITE_URL__';
+        var base = location.origin + location.pathname.replace(/[^/]*$/, '');
+        var attrs = [
+          ['link[rel="canonical"]', 'href'],
+          ['meta[property="og:url"]', 'content'],
+          ['meta[property="og:image"]', 'content'],
+        ];
+        attrs.forEach(function (pair) {
+          var node = document.querySelector(pair[0]);
+          if (!node) return;
+          var value = node.getAttribute(pair[1]) || '';
+          if (value.indexOf(MARK) === 0) node.setAttribute(pair[1], base + value.slice(MARK.length));
+        });
+        var ld = document.querySelector('script[type="application/ld+json"]');
+        if (ld && ld.textContent.indexOf(MARK) !== -1) {
+          ld.textContent = ld.textContent.split(MARK).join(base);
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#exams">تخطَّ إلى قائمة النماذج</a>
+
+    <!-- Icon sprite -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="i-search" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
+        </symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24">
+          <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+        </symbol>
+        <symbol id="i-sliders" viewBox="0 0 24 24">
+          <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+          <circle cx="16" cy="7" r="2" />
+          <circle cx="10" cy="17" r="2" />
+        </symbol>
+        <symbol id="i-external" viewBox="0 0 24 24">
+          <path d="M11 5H6.5A2.5 2.5 0 0 0 4 7.5v10A2.5 2.5 0 0 0 6.5 20h10a2.5 2.5 0 0 0 2.5-2.5V13" />
+          <path d="M14.5 4.5H20v5.5" />
+          <path d="M20 4.5 12 12.5" />
+        </symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24">
+          <rect x="9" y="9" width="11" height="11" rx="2" />
+          <path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <path d="m5 12.5 4.5 4.5L19 7" />
+        </symbol>
+        <symbol id="i-heart" viewBox="0 0 24 24">
+          <path
+            d="M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"
+          />
+        </symbol>
+        <symbol id="i-shuffle" viewBox="0 0 24 24">
+          <path d="M4 7h3.5l9 10H20M4 17h3.5l3-3.4M13.5 9.4 16.5 7H20" />
+          <path d="m17.5 4.5 2.5 2.5-2.5 2.5M17.5 14.5 20 17l-2.5 2.5" />
+        </symbol>
+        <symbol id="i-play" viewBox="0 0 24 24">
+          <path d="M8 5.5v13l10-6.5-10-6.5z" />
+        </symbol>
+        <symbol id="i-list" viewBox="0 0 24 24">
+          <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+        </symbol>
+        <symbol id="i-inbox" viewBox="0 0 24 24">
+          <path d="M4 13h4l1.5 3h5L16 13h4" />
+          <path d="M6.5 5h11l2.5 8v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4l2.5-8z" />
+        </symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7.5v5.5M12 16.5h.01" />
+        </symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24">
+          <path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.5" />
+          <path d="M4 4v4.5h4.5" />
+          <path d="M4 13a8 8 0 0 0 13.7 4.7L20 15.5" />
+          <path d="M20 20v-4.5h-4.5" />
+        </symbol>
+        <symbol id="i-file" viewBox="0 0 24 24">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" />
+          <path d="M14 3v5h5M9 13h6M9 17h4" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <header class="site-header">
+      <div class="container header__inner">
+        <a class="brand" href="./" aria-label="العِراب في القدرات — الصفحة الرئيسية">
+          <img
+            class="brand__mark"
+            src="assets/img/logo-96.png"
+            alt=""
+            width="93"
+            height="96"
+            decoding="async"
+          />
+          <span class="brand__text">
+            <strong class="brand__name">العِراب في القدرات</strong>
+            <span class="brand__sub">الأستاذ / أحمد طلعت ربيع</span>
+          </span>
+        </a>
+
+        <nav class="nav" id="primaryNav" aria-label="التنقل الرئيسي">
+          <a href="./" aria-current="page">الرئيسية</a>
+          <a href="#exams">النماذج</a>
+          <a href="about.html">عن المنصة</a>
+        </nav>
+
+        <div class="header__actions">
+          <button
+            type="button"
+            class="icon-btn"
+            id="themeToggle"
+            aria-label="تبديل مظهر الموقع"
+            title="تبديل المظهر"
+          >
+            <svg class="icon icon--lg" aria-hidden="true"><use href="#i-moon" /></svg>
+          </button>
+          <button
+            type="button"
+            class="icon-btn nav-toggle"
+            id="navToggle"
+            aria-label="فتح قائمة التنقل"
+            aria-expanded="false"
+            aria-controls="primaryNav"
+          >
+            <svg class="icon icon--lg" aria-hidden="true"><use href="#i-menu" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ============================ Hero ============================ -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="container hero__inner">
+          <p class="eyebrow">تجميعات اللفظي · نماذج إلكترونية</p>
+
+          <h1 class="hero__title" id="hero-title">
+            كل نماذج التجميعات <em>في مكان واحد</em>
+          </h1>
+
+          <p class="hero__lead">
+            ابحث عن النموذج باسمه أو برقمه، ثم ابدأ الاختبار مباشرة. لا تسجيل، ولا خطوات إضافية.
+          </p>
+
+          <form class="search" id="searchForm" role="search" autocomplete="off">
+            <svg class="icon search__icon" aria-hidden="true"><use href="#i-search" /></svg>
+            <label class="sr-only" for="searchInput">ابحث في النماذج</label>
+            <input
+              class="search__input"
+              id="searchInput"
+              type="search"
+              name="q"
+              placeholder="ابحث باسم النموذج أو رقمه"
+              enterkeyhint="search"
+              aria-describedby="searchHint"
+            />
+            <button
+              type="button"
+              class="icon-btn search__clear"
+              id="searchClear"
+              aria-label="مسح البحث"
+              hidden
+            >
+              <svg class="icon" aria-hidden="true"><use href="#i-close" /></svg>
+            </button>
+            <button type="submit" class="btn btn--primary search__submit" aria-label="ابحث">
+              <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
+              <span class="search__submit-label">ابحث</span>
+            </button>
+          </form>
+
+          <p class="hero__hint" id="searchHint">
+            مثال: الزلازل، أو <span class="tnum">47</span>
+            <span class="hero__hint-sep" aria-hidden="true">·</span>
+            <span class="hero__hint-key">اضغط <kbd>/</kbd> للانتقال إلى البحث</span>
+          </p>
+
+          <ul class="hero__stats" id="heroStats">
+            <li>
+              <b class="tnum" data-stat="total">301</b>
+              <span data-unit="exam">نموذج اختبار</span>
+            </li>
+            <li>
+              <b class="tnum" data-stat="questions">3,913</b>
+              <span data-unit="question">سؤالًا</span>
+            </li>
+            <li>
+              <b class="tnum"><time datetime="2026-09-09" data-stat="updated">9 سبتمبر 2026</time></b>
+              <span>آخر تحديث</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ======================== Quick access ======================== -->
+      <section class="quick container" id="quickAccess" aria-labelledby="quick-title">
+        <h2 class="sr-only" id="quick-title">وصول سريع</h2>
+
+        <div class="quick__grid">
+          <button type="button" class="tile tile--accent" id="tileResume">
+            <span class="tile__icon" aria-hidden="true">
+              <svg class="icon icon--lg flip"><use href="#i-play" /></svg>
+            </span>
+            <span class="tile__body">
+              <span class="tile__label" id="tileResumeLabel">ابدأ من النموذج الأول</span>
+              <span class="tile__meta" id="tileResumeMeta">تابع من حيث توقّفت</span>
+            </span>
+          </button>
+
+          <button type="button" class="tile" id="tileTodo">
+            <span class="tile__icon" aria-hidden="true">
+              <svg class="icon icon--lg"><use href="#i-list" /></svg>
+            </span>
+            <span class="tile__body">
+              <span class="tile__label">لم تُنجز بعد</span>
+              <span class="tile__meta" id="tileTodoMeta">اعرض ما تبقّى عليك</span>
+            </span>
+          </button>
+
+          <button type="button" class="tile" id="tileFav">
+            <span class="tile__icon" aria-hidden="true">
+              <svg class="icon icon--lg"><use href="#i-heart" /></svg>
+            </span>
+            <span class="tile__body">
+              <span class="tile__label">المفضلة</span>
+              <span class="tile__meta" id="tileFavMeta">النماذج التي حفظتها</span>
+            </span>
+          </button>
+
+          <button type="button" class="tile tile--gold" id="tileRandom">
+            <span class="tile__icon" aria-hidden="true">
+              <svg class="icon icon--lg"><use href="#i-shuffle" /></svg>
+            </span>
+            <span class="tile__body">
+              <span class="tile__label">نموذج عشوائي</span>
+              <span class="tile__meta" id="tileRandomMeta">تدرَّب على نموذج غير متوقع</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="progress" id="progressPanel" hidden>
+          <span class="progress__label" id="progressLabel">تقدّمك</span>
+          <span
+            class="progress__bar"
+            id="progressBar"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            aria-labelledby="progressLabel"
+          ><span class="progress__fill" id="progressFill"></span></span>
+          <button type="button" class="btn btn--ghost btn--sm progress__reset" id="progressReset">
+            <svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg>
+            <span>إعادة الضبط</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================== Exams ============================ -->
+      <section class="section" id="exams" aria-labelledby="exams-title">
+        <div class="container">
+          <div class="toolbar">
+            <div class="toolbar__heading">
+              <h2 id="exams-title">النماذج</h2>
+              <p class="result-count" id="resultCount"><b>—</b></p>
+              <p class="sr-only" id="resultCountLive" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="toolbar__controls toolbar__controls--inline" id="controlsHome">
+              <div id="filterControls">
+                <div class="field">
+                  <span class="field__label" id="statusLabel">الحالة</span>
+                  <div class="segmented" id="statusGroup" role="group" aria-labelledby="statusLabel">
+                    <button type="button" data-status="all" aria-pressed="true">الكل</button>
+                    <button type="button" data-status="todo" aria-pressed="false">لم تُنجز</button>
+                    <button type="button" data-status="done" aria-pressed="false">مُنجزة</button>
+                    <button type="button" data-status="fav" aria-pressed="false">المفضلة</button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="sortSelect">الترتيب</label>
+                  <select class="select" id="sortSelect">
+                    <option value="number-asc">حسب الرقم — تصاعديًا</option>
+                    <option value="number-desc">حسب الرقم — تنازليًا</option>
+                    <option value="title">أبجديًا حسب الاسم</option>
+                    <option value="recent">آخر ما فتحته</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn--secondary filter-trigger" id="filterTrigger">
+              <svg class="icon" aria-hidden="true"><use href="#i-sliders" /></svg>
+              <span>تصفية</span>
+              <span class="filter-trigger__badge" id="filterBadge" hidden>0</span>
+            </button>
+          </div>
+
+          <nav class="ranges" aria-label="الانتقال إلى مجموعة من النماذج">
+            <div class="chips" id="rangeChips"></div>
+          </nav>
+
+          <div class="active-filters" id="activeFilters" hidden>
+            <span class="active-filters__label">عوامل التصفية:</span>
+            <span class="chips" id="activeTags"></span>
+            <button type="button" class="btn btn--ghost btn--sm" id="resetAll">مسح الكل</button>
+          </div>
+
+          <div class="grid" id="examGrid" aria-busy="true">
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+          </div>
+
+          <div class="state" id="emptyState" hidden>
+            <span class="state__icon" aria-hidden="true">
+              <svg class="icon icon--lg"><use href="#i-inbox" /></svg>
+            </span>
+            <p class="state__title">لا توجد نتائج</p>
+            <p class="state__text">
+              <span id="emptyLead">لم نجد نموذجًا مطابقًا لـ</span>
+              <span class="term" id="emptyTerm"></span>
+            </p>
+            <div class="state__suggestions" id="emptySuggestions"></div>
+            <div class="state__actions">
+              <button type="button" class="btn btn--primary" data-reset-proxy>
+                <svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg>
+                <span>عرض جميع النماذج</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="state" id="errorState" hidden>
+            <span class="state__icon" aria-hidden="true">
+              <svg class="icon icon--lg"><use href="#i-alert" /></svg>
+            </span>
+            <p class="state__title">تعذّر تحميل قائمة النماذج</p>
+            <p class="state__text">
+              حدث خطأ أثناء تحميل البيانات. تحقّق من اتصالك بالإنترنت ثم أعد تحميل الصفحة.
+            </p>
+            <div class="state__actions">
+              <button type="button" class="btn btn--primary" onclick="location.reload()">
+                <svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg>
+                <span>إعادة المحاولة</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="scrollSentinel" aria-hidden="true"></div>
+
+          <div class="load-more" id="loadMore" hidden>
+            <button type="button" class="btn btn--secondary" id="loadMoreBtn">
+              عرض المزيد من النماذج
+            </button>
+            <p class="load-more__meta" id="loadMoreMeta"></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer__inner">
+        <div class="footer__brand">
+          <img src="assets/img/logo-96.png" alt="" width="93" height="96" loading="lazy" />
+          <span>
+            <span class="footer__name">العِراب في القدرات</span><br />
+            <span class="footer__sub">الأستاذ / أحمد طلعت ربيع</span>
+          </span>
+        </div>
+
+        <nav class="footer__links" aria-label="روابط التذييل">
+          <a href="./">الرئيسية</a>
+          <a href="#exams">النماذج</a>
+          <a href="about.html">عن المنصة</a>
+        </nav>
+
+        <p class="footer__legal">
+          النماذج مستضافة على Google Forms وتُفتح في تبويب جديد. يُحفظ تقدّمك على جهازك فقط، ولا
+          يُرسل إلى أي خادم.
+        </p>
+      </div>
+    </footer>
+
+    <!-- Mobile filter sheet -->
+    <div class="sheet" id="filterSheet" hidden>
+      <div class="sheet__backdrop"></div>
+      <div
+        class="sheet__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filterSheetTitle"
+      >
+        <div class="sheet__head">
+          <h2 id="filterSheetTitle">تصفية النماذج</h2>
+          <button type="button" class="icon-btn sheet__close" id="filterSheetClose" aria-label="إغلاق">
+            <svg class="icon icon--lg" aria-hidden="true"><use href="#i-close" /></svg>
+          </button>
+        </div>
+        <div id="filterSheetBody"></div>
+        <div class="sheet__foot">
+          <button type="button" class="btn btn--secondary" id="filterSheetReset">مسح الكل</button>
+          <button type="button" class="btn btn--primary btn--block" id="filterSheetApply">
+            عرض النتائج
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" aria-live="polite">
+      <p class="toast__inner"><span id="toastText"></span></p>
+    </div>
+
+    <!-- Exam card template -->
+    <template id="examCardTemplate">
+      <article class="card">
+        <div class="card__top">
+          <span class="card__number">نموذج <b class="tnum">0</b></span>
+          <span class="card__flags">
+            <button type="button" class="icon-btn card__fav" aria-pressed="false">
+              <svg class="icon" aria-hidden="true"><use href="#i-heart" /></svg>
+            </button>
+            <button type="button" class="icon-btn card__toggle" aria-pressed="false">
+              <svg class="icon" aria-hidden="true"><use href="#i-check" /></svg>
+            </button>
+          </span>
+        </div>
+
+        <h3 class="card__title"></h3>
+
+        <p class="card__meta">
+          <span data-meta="questions">
+            <svg class="icon" aria-hidden="true"><use href="#i-file" /></svg>
+            <span data-field="questions"></span>
+          </span>
+        </p>
+
+        <div class="card__actions">
+          <a class="btn btn--primary card__cta" href="#" target="_blank" rel="noopener noreferrer">
+            <span>ابدأ الاختبار</span>
+            <svg class="icon flip" aria-hidden="true"><use href="#i-external" /></svg>
+          </a>
+          <button type="button" class="icon-btn icon-btn--bordered card__copy">
+            <svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg>
+          </button>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="assets/js/ui.js"></script>
+    <script type="module" src="assets/js/app.js"></script>
+  </body>
+</html>

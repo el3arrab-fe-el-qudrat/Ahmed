@@ -1,0 +1,70 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Allow the workflow to publish to Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deployments at once; queued runs supersede each other.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Exposes the real published URL (origin + base path) BEFORE the upload,
+      # so canonical/OG/sitemap URLs can be filled in correctly for either a
+      # project page, a user page or a custom domain.
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Rebuild the exam dataset from the source export
+        run: node tools/build-data.mjs
+
+      - name: Run search and data tests
+        run: node tools/test-search.mjs
+
+      - name: Validate every exam link resolves
+        run: node tools/check-links.mjs --offline
+
+      - name: Stamp the real site URL into metadata
+        run: node tools/set-site-url.mjs "${{ steps.pages.outputs.base_url }}"
+
+      # Tells Pages to serve the files as-is instead of running them through
+      # Jekyll (which would drop anything starting with "_" and choke on the
+      # non-ASCII filenames in data/source/).
+      - name: Disable Jekyll processing
+        run: touch .nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

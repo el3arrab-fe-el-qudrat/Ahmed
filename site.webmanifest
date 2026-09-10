@@ -1,0 +1,32 @@
+{
+  "name": "العِراب في القدرات — نماذج تجميعات اللفظي",
+  "short_name": "العِراب في القدرات",
+  "description": "نماذج تجميعات اللفظي للأستاذ أحمد طلعت ربيع — ابحث عن النموذج وابدأ الاختبار مباشرة.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f5f1",
+  "theme_color": "#182234",
+  "icons": [
+    {
+      "src": "assets/img/logo-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/img/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/img/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

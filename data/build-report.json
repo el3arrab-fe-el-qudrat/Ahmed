@@ -1,0 +1,40 @@
+{
+  "sourceFile": "data/source/روابط الفورمات 1-301.json",
+  "sourceRecords": 301,
+  "published": 301,
+  "excluded": 0,
+  "issues": [],
+  "outputBytes": 61116,
+  "ranges": [
+    {
+      "from": 1,
+      "to": 50,
+      "count": 50
+    },
+    {
+      "from": 51,
+      "to": 100,
+      "count": 50
+    },
+    {
+      "from": 101,
+      "to": 150,
+      "count": 50
+    },
+    {
+      "from": 151,
+      "to": 200,
+      "count": 50
+    },
+    {
+      "from": 201,
+      "to": 250,
+      "count": 50
+    },
+    {
+      "from": 251,
+      "to": 301,
+      "count": 51
+    }
+  ]
+}

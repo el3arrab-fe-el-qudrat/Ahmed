@@ -110,14 +110,42 @@ Run it manually after a data update.
 
 1. Push this folder to a GitHub repository.
 2. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+   Do this *before* the first run — see the troubleshooting note below.
 3. Push to `main`. `.github/workflows/deploy.yml` will:
    rebuild the dataset → run the tests → validate the links →
    **stamp the real Pages URL** into the canonical/OG/sitemap tags →
    add `.nojekyll` → deploy.
 
-Nothing needs to be configured by hand; `actions/configure-pages` reports the real
-URL, so the same workflow is correct for a project page, a user page or a custom
-domain.
+Nothing else needs configuring; `actions/configure-pages` reports the real URL, so
+the same workflow is correct for a project page, a user page or a custom domain.
+
+#### If the build fails at "Configure Pages"
+
+```
+Error: Get Pages site failed. Please verify that the repository has Pages
+enabled and configured to build using GitHub Actions.
+Error: HttpError: Not Found
+```
+
+This means Pages has never been turned on for the repository, so there is no Pages
+site for the action to look up. It is a repository setting, not a problem with the
+site or the build.
+
+**Fix:** *Settings → Pages → Build and deployment → Source: **GitHub Actions***, then
+re-run the workflow (Actions → the failed run → *Re-run all jobs*).
+
+The workflow already tries to avoid this on its own:
+
+- `configure-pages` is called with `enablement: true`, which creates the Pages site
+  via the API when it is missing. That needs Actions to have write access —
+  *Settings → Actions → General → Workflow permissions* must be
+  **Read and write permissions**, otherwise the API call is rejected.
+- The step is marked `continue-on-error`, and the next step derives the
+  conventional URL (`https://<owner>.github.io/<repo>/`, or the domain root for an
+  `<owner>.github.io` repository) so the metadata is still stamped correctly.
+
+Note that only *this* step is tolerant. The actual `deploy-pages` step at the end
+still requires Pages to be enabled — there is no way around the one-time setting.
 
 ### The manual path (deploy from a branch)
 

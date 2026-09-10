@@ -6,6 +6,8 @@ on:
   workflow_dispatch:
 
 # Allow the workflow to publish to Pages.
+# `pages: write` is also what lets configure-pages create the Pages site itself
+# (see the `enablement` input below).
 permissions:
   contents: read
   pages: write
@@ -26,14 +28,45 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      # Exposes the real published URL (origin + base path) BEFORE the upload,
-      # so canonical/OG/sitemap URLs can be filled in correctly for either a
-      # project page, a user page or a custom domain.
+      # Reports the real published URL (origin + base path) BEFORE the upload, so
+      # canonical/OG/sitemap URLs can be stamped correctly for a project page, a
+      # user page or a custom domain.
+      #
+      # `enablement: true` creates the Pages site if the repository does not have
+      # one yet — without it this step fails with "Get Pages site failed … Not
+      # Found" on a repository where Pages has never been turned on.
+      #
+      # It is allowed to fail: publishing must not depend on being able to look
+      # the URL up, so the next step derives a fallback instead.
       - name: Configure Pages
         id: pages
+        continue-on-error: true
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      # If the lookup above succeeded, use the URL it reported. Otherwise derive
+      # the conventional one: github.io sites are always
+      # https://<owner>.github.io/<repo>/, except the <owner>.github.io repo
+      # itself, which is served from the domain root.
+      - name: Resolve the site URL
+        id: site
+        run: |
+          url="${{ steps.pages.outputs.base_url }}"
+          if [ -z "$url" ]; then
+            owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            repo="${{ github.event.repository.name }}"
+            if [ "$(echo "$repo" | tr '[:upper:]' '[:lower:]')" = "$owner.github.io" ]; then
+              url="https://$owner.github.io/"
+            else
+              url="https://$owner.github.io/$repo/"
+            fi
+            echo "configure-pages did not report a URL; using the derived default."
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Site URL: $url"
 
       - name: Rebuild the exam dataset from the source export
         run: node tools/build-data.mjs
@@ -45,7 +78,7 @@ jobs:
         run: node tools/check-links.mjs --offline
 
       - name: Stamp the real site URL into metadata
-        run: node tools/set-site-url.mjs "${{ steps.pages.outputs.base_url }}"
+        run: node tools/set-site-url.mjs "${{ steps.site.outputs.url }}"
 
       # Tells Pages to serve the files as-is instead of running them through
       # Jekyll (which would drop anything starting with "_" and choke on the

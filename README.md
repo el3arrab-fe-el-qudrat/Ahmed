@@ -214,14 +214,15 @@ memory instead of throwing. Stored data is sanitised on read, changes are writte
 immediately when the tab is hidden, and a second open tab picks up changes through
 the `storage` event instead of overwriting them. `tools/test-store.mjs` covers all of it.
 
-**How "done" gets recorded.** A Google Form cannot tell the page it was submitted, so
-opening a form (card button, «أكمل/تابع» tile, random tile) queues a check. When the
-student comes back to the tab — at least 20 seconds later, within 7 days — a panel
-asks «هل أنهيت النموذج؟». «نعم» marks it done and offers the next unfinished form;
-«ليس بعد» dismisses it. The round checkbox on each card does the same by hand.
+**How "done" gets recorded.** Opening a form *is* doing it: any link that opens one
+(«ابدأ الاختبار» on a card, the «ابدأ/تابع» tile, the random tile, including a
+middle-click) marks it done immediately. A toast confirms it with an «تراجع» undo; if
+the form's tab came to the front, the toast is held until the student returns, so it
+is seen. The round checkbox on each card toggles the mark by hand at any time.
 
-- **Resume tile:** the last opened form if it is not done («أكمل»), otherwise the next
-  unfinished one after it («تابع»); on a fresh device the first form («ابدأ»).
+- **Resume tile:** the first unfinished form after the last one opened («تابع»); on a
+  fresh device the first form («ابدأ»). If the student un-marks the last form they
+  opened, it points back at that one («أكمل»).
 - **Random tile:** an unfinished form (never the one just opened), regardless of the
   current search or filters.
 - **Status tabs** show live counts under the current range and search. Marking a card

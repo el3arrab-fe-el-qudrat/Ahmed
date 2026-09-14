@@ -84,22 +84,31 @@ console.log('\nresetProgress keeps favourites');
   assert('persisted the same way', saved().fav[9] === 1 && Object.keys(saved().done).length === 0);
 }
 
-console.log('\nopening a form and the pending check');
+console.log('\nopening a form');
 {
   localStorage.map.clear();
-  const store = await load('pending');
+  const store = await load('opened');
   store.markOpened(5, 1234);
-  assert('records last opened', store.lastOpened === 5 && store.openedAt(5) === 1234);
-  assert('queues a check for it', store.pending?.n === 5 && store.pending?.at === 1234);
-  store.setDone(5, true);
-  assert('marking it done settles the check', store.pending === null);
+  assert('records the resume point', store.lastOpened === 5);
+  assert('records when it was opened', store.openedAt(5) === 1234);
   store.markOpened(5, 2000);
-  assert('re-opening a done form asks nothing', store.pending === null);
-  store.markOpened(6, 3000);
+  assert('re-opening updates the time', store.openedAt(5) === 2000);
+  assert('opening alone does not decide "done" (the page does)', store.isDone(5) === false);
+  store.setDone(5, true);
+  store.setDone(5, false);
+  assert('undo leaves the opened record in place', store.openedAt(5) === 2000 && !store.isDone(5));
+  assert('setDone reports the new state', store.setDone(6, true) === true && store.setDone(6, false) === false);
+}
+
+console.log('\ndata saved by the earlier "did you finish?" version');
+{
+  localStorage.map.clear();
+  seed({ v: 1, done: { 1: 1 }, fav: {}, opened: { 5: 10 }, last: 5, pending: { n: 5, at: 10 } });
+  const store = await load('legacy-pending');
   store.setDone(2, true);
-  assert('marking another form keeps the check', store.pending?.n === 6);
-  store.clearPending();
-  assert('clearPending', store.pending === null);
+  store.flush();
+  assert('keeps the real progress', store.isDone(1) && store.lastOpened === 5);
+  assert('drops the obsolete pending field on the next save', !('pending' in saved()));
 }
 
 console.log('\nundo snapshot');
@@ -126,14 +135,23 @@ console.log('\nhostile or corrupted storage');
     fav: [1, 2],
     opened: { 3: 'soon', 4: 99 },
     last: 'hi',
-    pending: { n: '5', at: 1 },
   });
   const store = await load('hostile');
   assert('keeps valid done marks only', store.isDone(2) && !store.isDone(3) && !store.isDone(-4));
   assert('rejects an array as favourites', store.isFav(1) === false);
   assert('drops non-numeric timestamps', store.openedAt(3) === 0 && store.openedAt(4) === 99);
   assert('rejects a non-numeric last', store.lastOpened === 0);
-  assert('rejects a malformed pending check', store.pending === null);
+}
+{
+  // Written as raw JSON: an object literal would swallow "__proto__" itself.
+  localStorage.map.clear();
+  seed('{"__proto__":{"polluted":1},"done":{"__proto__":{"polluted":1},"7":1},"fav":{"constructor":1}}');
+  const store = await load('proto');
+  store.setDone(8, true);
+  store.flush();
+  assert('__proto__ keys are ignored, real marks kept', store.isDone(7) && store.isDone(8));
+  assert('no prototype pollution', ({}).polluted === undefined && Object.prototype.polluted === undefined);
+  assert('nothing but exam numbers is saved', Object.keys(saved().done).join() === '7,8' && Object.keys(saved().fav).length === 0);
 }
 {
   localStorage.map.clear();
@@ -168,7 +186,7 @@ console.log('\nanother tab changes progress');
   store.subscribe(() => {
     notified += 1;
   });
-  seed({ v: 1, done: { 1: 1, 2: 1 }, fav: { 5: 1 }, opened: {}, last: 2, pending: null });
+  seed({ v: 1, done: { 1: 1, 2: 1 }, fav: { 5: 1 }, opened: {}, last: 2 });
   window.dispatchEvent(Object.assign(new Event('storage'), { key: KEY }));
   assert('subscribers are told', notified === 1);
   assert('the fresh copy is read', store.isDone(2) && store.isFav(5) && store.lastOpened === 2);

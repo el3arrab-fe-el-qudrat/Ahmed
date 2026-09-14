@@ -1613,8 +1613,7 @@ a.tile:not([href]) {
 
 .toast {
   position: fixed;
-  /* --dock-offset lifts the toast above the check-in panel when both show. */
-  inset-block-end: calc(var(--sp-5) + env(safe-area-inset-bottom) + var(--dock-offset, 0px));
+  inset-block-end: calc(var(--sp-5) + env(safe-area-inset-bottom));
   inset-inline: 0;
   z-index: 150;
   display: flex;
@@ -1682,86 +1681,6 @@ a.tile:not([href]) {
 .toast__action:focus-visible {
   outline: 2px solid var(--gold-400);
   outline-offset: 2px;
-}
-
-/* --------------------------------------------------------------------------
-   Check-in: "did you finish this form?"
-   -------------------------------------------------------------------------- */
-
-.checkin {
-  position: fixed;
-  inset-inline: var(--gutter);
-  inset-block-end: calc(var(--sp-4) + env(safe-area-inset-bottom));
-  z-index: 140;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  max-width: 580px;
-  margin-inline: auto;
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-3), 0 2px 6px rgba(24, 34, 52, 0.08);
-  animation: slide-up var(--dur-slow) var(--ease);
-}
-
-.checkin[hidden] {
-  display: none;
-}
-
-.checkin__icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: var(--gold-soft);
-  color: var(--gold-ink);
-}
-
-.checkin__body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.checkin__title {
-  font-size: var(--fs-md);
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--ink);
-}
-
-.checkin__meta {
-  font-size: var(--fs-xs);
-  line-height: 1.5;
-  color: var(--ink-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.checkin__actions {
-  display: flex;
-  flex: none;
-  gap: var(--sp-2);
-}
-
-@media (max-width: 519px) {
-  .checkin {
-    flex-wrap: wrap;
-    padding: var(--sp-3);
-  }
-
-  .checkin__actions {
-    width: 100%;
-  }
-
-  .checkin__actions .btn {
-    flex: 1 1 0;
-    min-height: 42px;
-  }
 }
 
 :root[data-theme="dark"] .toast__inner {

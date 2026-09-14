@@ -6,9 +6,10 @@
  * single render pass. Cards are cloned from a <template> and appended in
  * batches so 300+ records never block the first paint.
  *
- * Progress (done / favourite / opened) never re-renders the list: a change
- * repaints only the affected card, the counters and the quick-access tiles, so
- * a student deep in the grid never loses their place.
+ * Opening a form marks it done straight away (with an undo). Progress changes
+ * never re-render the list: they repaint only the affected card, the counters
+ * and the quick-access tiles, so a student deep in the grid never loses their
+ * place.
  */
 
 import { parseQuery, searchExams, highlightRanges } from './search.js';
@@ -16,11 +17,6 @@ import { store } from './store.js';
 
 const PAGE_SIZE = 48;
 const DATA_URL = new URL('../data/exams.json', import.meta.url);
-
-/** Coming straight back means the form was probably not sat yet: ask later. */
-const CHECKIN_MIN_AWAY_MS = 20 * 1000;
-/** Past this, a forgotten "did you finish?" is stale and silently dropped. */
-const CHECKIN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /* -------------------------------------------------------------------------- */
 /* Element lookup                                                              */
@@ -79,12 +75,6 @@ const el = {
   tileFavMeta: $('#tileFavMeta'),
   tileRandom: $('#tileRandom'),
   tileRandomMeta: $('#tileRandomMeta'),
-  checkin: $('#checkin'),
-  checkinNumber: $('#checkinNumber'),
-  checkinMeta: $('#checkinMeta'),
-  checkinYes: $('#checkinYes'),
-  checkinNo: $('#checkinNo'),
-  checkinLive: $('#checkinLive'),
   toast: $('#toast'),
   toastText: $('#toastText'),
   toastActions: $('#toastActions'),
@@ -313,7 +303,10 @@ function toast(message, { duration = 2600, action = null } = {}) {
 
   el.toastActions.hidden = !action;
   el.toast.classList.add('toast--visible');
-  scheduleToastHide(duration);
+  // Raised while the page is hidden (the form just opened in front of it):
+  // hold it until the student is back, so the confirmation is actually seen.
+  if (document.visibilityState === 'hidden') clearTimeout(toastHandle);
+  else scheduleToastHide(duration);
   return actionNode;
 }
 
@@ -628,8 +621,8 @@ const STATUS_EMPTY = {
   },
   done: {
     icon: 'i-check',
-    title: 'لم تُحدِّد أي نموذج كمُنجز بعد',
-    lead: 'بعد أن تنهي اختبارًا اضغط على دائرة الإنجاز في بطاقته، أو أجب بـ«نعم» حين نسألك عند عودتك إلى الصفحة.',
+    title: 'لم تُنجز أي نموذج بعد',
+    lead: 'اضغط «ابدأ الاختبار» في أي نموذج، وسيُسجَّل هنا كمُنجز تلقائيًا.',
   },
   todo: {
     icon: 'i-check',
@@ -843,7 +836,7 @@ function refreshQuickAccess() {
   }
 
   if (stats.todo === 0) el.tileTodoMeta.textContent = 'أنجزت جميع النماذج';
-  else if (stats.done === 0) el.tileTodoMeta.textContent = 'علِّم ما تُنجزه لتتابع الباقي';
+  else if (stats.done === 0) el.tileTodoMeta.textContent = 'كل نموذج تبدؤه يُسجَّل كمُنجز';
   else el.tileTodoMeta.textContent = `بقي لك ${countPhrase(stats.todo, 'exam')}`;
 
   el.tileFavMeta.textContent = stats.fav
@@ -864,7 +857,6 @@ function refreshProgress() {
 
 function setDone(n, on, { announce = true } = {}) {
   store.setDone(n, on);
-  if (el.checkin.dataset.n === String(n)) hideCheckin();
   syncCard(n);
   refreshProgress();
   if (announce) {
@@ -880,105 +872,36 @@ function toggleFav(n) {
 }
 
 /**
- * Called from the click on any link that opens a form. UI updates are
- * deferred: re-pointing a tile's href inside its own click handler would make
- * the browser open the *new* target instead of the one that was clicked.
+ * Called from the click on any link that opens a form: the form counts as done
+ * from that moment, and the toast offers an undo for a mistaken tap.
+ *
+ * UI updates are deferred: re-pointing a tile's href inside its own click
+ * handler would make the browser open the *new* target instead of the one
+ * that was clicked.
  */
-function examOpened(n) {
+function examOpened(n, { random = false } = {}) {
+  const exam = state.byNumber.get(n);
+  if (!exam) return;
+
+  const newlyDone = !store.isDone(n);
   store.markOpened(n);
-  store.flush();
-  hideCheckin();
+  if (newlyDone) store.setDone(n, true);
+  store.flush(); // this tab is about to be hidden, and may be discarded
+
   setTimeout(() => {
     syncCard(n);
     refreshProgress();
+
+    const number = arabicNumber(n);
+    if (!newlyDone) {
+      if (random) toast(`فُتح النموذج ${number}: ${exam.t}`);
+      return;
+    }
+    toast(random ? `فُتح النموذج ${number} وسُجِّل كمُنجز` : `سُجِّل النموذج ${number} كمُنجز`, {
+      duration: 6000,
+      action: { label: 'تراجع', onClick: () => setDone(n, false) },
+    });
   }, 0);
-}
-
-/* -------------------------------------------------------------------------- */
-/* "Did you finish?" check-in                                                  */
-/*                                                                             */
-/* A Google Form cannot tell this page it was submitted, and students forget   */
-/* to tick a small checkbox. So when they come back to the tab after opening a  */
-/* form, ask once — the answer is the progress tracking.                        */
-/* -------------------------------------------------------------------------- */
-
-function syncDockOffset() {
-  const height = el.checkin.hidden ? 0 : el.checkin.offsetHeight + 12;
-  document.documentElement.style.setProperty('--dock-offset', `${height}px`);
-}
-
-function showCheckin(exam) {
-  const n = String(exam.n);
-  if (!el.checkin.hidden && el.checkin.dataset.n === n) return;
-  el.checkin.dataset.n = n;
-  el.checkinNumber.textContent = arabicNumber(exam.n);
-  el.checkinMeta.textContent = exam.t;
-  el.checkin.hidden = false;
-  el.checkinLive.textContent = `هل أنهيت النموذج ${arabicNumber(exam.n)}، ${exam.t}؟`;
-  syncDockOffset();
-}
-
-function hideCheckin() {
-  if (el.checkin.hidden) return;
-  el.checkin.hidden = true;
-  delete el.checkin.dataset.n;
-  el.checkinLive.textContent = '';
-  syncDockOffset();
-}
-
-function maybeCheckIn() {
-  if (!state.data || document.visibilityState !== 'visible') return;
-
-  const pending = store.pending;
-  if (!pending) {
-    hideCheckin();
-    return;
-  }
-
-  const exam = state.byNumber.get(pending.n);
-  const age = Date.now() - pending.at;
-  if (!exam || store.isDone(pending.n) || age > CHECKIN_MAX_AGE_MS) {
-    store.clearPending();
-    hideCheckin();
-    return;
-  }
-  if (age < CHECKIN_MIN_AWAY_MS) return; // too soon; ask on a later return
-
-  showCheckin(exam);
-}
-
-function answerCheckin(finished) {
-  const n = Number(el.checkin.dataset.n);
-  const hadFocus = el.checkin.contains(document.activeElement);
-  if (!n) {
-    hideCheckin();
-    return;
-  }
-
-  if (!finished) {
-    store.clearPending();
-    hideCheckin();
-    if (hadFocus) el.tileResume.focus({ preventScroll: true });
-    return;
-  }
-
-  setDone(n, true, { announce: false });
-  const { exam: next } = resumeTarget();
-  const message = `سُجِّل النموذج ${arabicNumber(n)} كمُنجز`;
-  if (!next) {
-    toast(`${message} — أنجزت جميع النماذج`, { duration: 5000 });
-    return;
-  }
-
-  const action = toast(message, {
-    duration: 9000,
-    action: {
-      label: `التالي: النموذج ${arabicNumber(next.n)}`,
-      href: examUrl(next),
-      onClick: () => examOpened(next.n),
-    },
-  });
-  if (hadFocus) action?.focus({ preventScroll: true });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1168,10 +1091,8 @@ function bindEvents() {
   });
 
   onOpenLink(el.tileRandom, () => {
-    const exam = state.byNumber.get(Number(el.tileRandom.dataset.target));
-    if (!exam) return;
-    examOpened(exam.n);
-    toast(`فُتح النموذج ${arabicNumber(exam.n)}: ${exam.t}`);
+    const n = Number(el.tileRandom.dataset.target);
+    if (n) examOpened(n, { random: true });
   });
 
   el.tileTodo.addEventListener('click', () => {
@@ -1195,7 +1116,6 @@ function bindEvents() {
   el.progressReset.addEventListener('click', () => {
     const snapshot = store.snapshot();
     store.resetProgress();
-    hideCheckin();
     repaintCards();
     refreshProgress();
     const undo = toast('مُسح سجل الإنجاز، والمفضلة كما هي', {
@@ -1213,12 +1133,6 @@ function bindEvents() {
     // The reset button disappears with the progress it reset; keep the
     // keyboard focus somewhere useful instead of dropping it on <body>.
     undo?.focus({ preventScroll: true });
-  });
-
-  el.checkinYes.addEventListener('click', () => answerCheckin(true));
-  el.checkinNo.addEventListener('click', () => answerCheckin(false));
-  el.checkin.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') answerCheckin(false);
   });
 
   el.toast.addEventListener('mouseenter', () => clearTimeout(toastHandle));
@@ -1256,31 +1170,32 @@ function bindEvents() {
     render();
   });
 
-  // Coming back to the tab: refresh relative times, then ask about the form.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
+    const toastShown = el.toast.classList.contains('toast--visible');
+    if (document.visibilityState === 'hidden') {
+      if (toastShown) clearTimeout(toastHandle);
+      return;
+    }
+    // Back from the form: refresh the "opened…" times, and give the held
+    // confirmation (with its undo) a few seconds on screen.
     repaintCards();
     refreshProgress();
-    maybeCheckIn();
+    if (toastShown) scheduleToastHide(5000);
   });
-  window.addEventListener('focus', maybeCheckIn);
+
   window.addEventListener('pageshow', (event) => {
     if (!event.persisted) return;
     // Restored from the back/forward cache: storage events were missed.
     store.reload();
     repaintCards();
     refreshProgress();
-    maybeCheckIn();
   });
 
   // Another tab of the portal changed progress.
   store.subscribe(() => {
     repaintCards();
     refreshProgress();
-    maybeCheckIn();
   });
-
-  if ('ResizeObserver' in window) new ResizeObserver(syncDockOffset).observe(el.checkin);
 
   // Infinite scroll, with the button as the accessible fallback.
   if ('IntersectionObserver' in window) {
@@ -1424,7 +1339,6 @@ async function boot() {
     refreshQuickAccess();
     compute();
     render();
-    maybeCheckIn();
 
     // Deep link: #exam-47 scrolls to and highlights that form.
     const hash = /^#exam-(\d+)$/.exec(location.hash);

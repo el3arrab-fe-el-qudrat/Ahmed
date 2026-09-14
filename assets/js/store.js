@@ -1,11 +1,11 @@
 /**
  * Device-local progress store.
  *
- * The dataset carries no per-student state, so "done", "favourite", "opened"
- * and the pending "did you finish?" check live only in this browser's
- * localStorage. Every storage call is wrapped: storage throws in some private
- * windows and when site data is blocked, and in that case the store keeps
- * working in memory for the rest of the visit.
+ * The dataset carries no per-student state, so "done", "favourite" and
+ * "opened" live only in this browser's localStorage. Every storage call is
+ * wrapped: storage throws in some private windows and when site data is
+ * blocked, and in that case the store keeps working in memory for the rest of
+ * the visit.
  */
 
 const KEY = 'arrab-qudurat:v1';
@@ -15,7 +15,7 @@ const KEY = 'arrab-qudurat:v1';
  * shared constant: a shallow copy would share the nested maps, so "clearing"
  * would hand back the very objects that still hold the old progress.
  */
-const fresh = () => ({ v: 1, done: {}, fav: {}, opened: {}, last: 0, pending: null });
+const fresh = () => ({ v: 1, done: {}, fav: {}, opened: {}, last: 0 });
 
 const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const isExamNumber = (value) => Number.isInteger(value) && value > 0;
@@ -46,10 +46,6 @@ function parse(raw) {
   next.fav = cleanMap(parsed.fav);
   next.opened = cleanMap(parsed.opened, true);
   next.last = isExamNumber(parsed.last) ? parsed.last : 0;
-  const p = parsed.pending;
-  if (isRecord(p) && isExamNumber(p.n) && Number(p.at) > 0) {
-    next.pending = { n: p.n, at: Number(p.at) };
-  }
   return next;
 }
 
@@ -138,8 +134,6 @@ export const store = {
     const s = read();
     if (on) s.done[n] = 1;
     else delete s.done[n];
-    // Answering the question in any way settles the pending check for it.
-    if (s.pending?.n === n) s.pending = null;
     write();
     return Boolean(on);
   },
@@ -159,12 +153,11 @@ export const store = {
     return next;
   },
 
-  /** Record that a form was opened, and queue a "did you finish?" check for it. */
+  /** Record that a form was opened (the resume point and the "opened…" hint). */
   markOpened(n, now = Date.now()) {
     const s = read();
     s.opened[n] = now;
     s.last = n;
-    s.pending = s.done[n] ? null : { n, at: now };
     write();
   },
 
@@ -174,18 +167,6 @@ export const store = {
 
   openedAt(n) {
     return read().opened[n] || 0;
-  },
-
-  /** @returns {{n: number, at: number} | null} */
-  get pending() {
-    return read().pending;
-  },
-
-  clearPending() {
-    const s = read();
-    if (!s.pending) return;
-    s.pending = null;
-    write();
   },
 
   /** An independent deep copy, for undo. */
@@ -199,8 +180,8 @@ export const store = {
   },
 
   /**
-   * Forget completion history — done marks, opened times, the resume point and
-   * any pending check — but keep favourites, which the student chose on purpose.
+   * Forget completion history — done marks, opened times and the resume point —
+   * but keep favourites, which the student chose on purpose.
    */
   resetProgress() {
     const fav = { ...read().fav };
@@ -220,7 +201,7 @@ export const store = {
     }
   },
 
-  /** Save anything pending, then drop the in-memory copy so the next read comes from storage. */
+  /** Save any unsaved change, then drop the in-memory copy so the next read comes from storage. */
   reload() {
     if (flushHandle) flush();
     cache = null;

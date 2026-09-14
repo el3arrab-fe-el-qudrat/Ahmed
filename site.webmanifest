@@ -1,6 +1,6 @@
 {
-  "name": "العِراب في القدرات — نماذج تجميعات اللفظي",
-  "short_name": "العِراب في القدرات",
+  "name": "العراب في القدرات — نماذج تجميعات اللفظي",
+  "short_name": "العراب في القدرات",
   "description": "نماذج تجميعات اللفظي للأستاذ أحمد طلعت ربيع — ابحث عن النموذج وابدأ الاختبار مباشرة.",
   "lang": "ar",
   "dir": "rtl",
@@ -8,7 +8,7 @@
   "scope": "./",
   "display": "standalone",
   "background_color": "#f7f5f1",
-  "theme_color": "#182234",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "assets/img/logo-256.png",

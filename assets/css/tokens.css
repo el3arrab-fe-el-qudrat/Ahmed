@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Design tokens — العِراب في القدرات
+   Design tokens — العراب في القدرات
    Palette sampled directly from the brand mark (assets/img/logo-*.png):
      navy      #182234   structure, text, depth
      burgundy  #651F24 → #7A2229   the single action colour
@@ -66,13 +66,34 @@
   --shadow-sheet: 0 -12px 40px -12px rgba(24, 34, 52, 0.28);
 
   --header-bg: rgba(255, 255, 255, 0.86);
-  --hero-wash: radial-gradient(120% 100% at 88% -20%, rgba(180, 133, 79, 0.13), transparent 58%),
-    radial-gradient(90% 90% at 8% -30%, rgba(24, 34, 52, 0.09), transparent 60%);
+  --hero-wash: radial-gradient(70% 90% at 100% 0%, rgba(180, 133, 79, 0.16), transparent 62%),
+    radial-gradient(60% 80% at 0% 100%, rgba(122, 34, 41, 0.07), transparent 65%),
+    linear-gradient(180deg, #fbf9f5, var(--paper-200));
+  --dots: rgba(24, 34, 52, 0.08);
+
+  /* Tinted call to action: burgundy text on a burgundy wash, filling on hover. */
+  --accent-tint-ink: var(--wine-600);
+  --shadow-accent: 0 10px 20px -12px rgba(122, 34, 41, 0.6);
+
+  /* The one "strong" surface (resume tile): deep navy in both themes. */
+  --strong-bg: linear-gradient(135deg, #22304a, #141d2e);
+  --strong-ink: #ffffff;
+  --strong-ink-2: rgba(255, 255, 255, 0.76);
+  --strong-icon-bg: rgba(221, 180, 120, 0.16);
+  --strong-icon: #e3bd85;
+
+  /* The logo always sits on a white disc so its artwork reads the same in
+     every theme; the rim and shadow are what adapt. */
+  --seal-rim: linear-gradient(150deg, #ffffff 25%, #efe3cf);
+  --seal-line: rgba(168, 117, 56, 0.3);
+  --seal-shadow: 0 30px 60px -30px rgba(24, 34, 52, 0.42), 0 10px 22px -14px rgba(122, 34, 41, 0.24);
+  --highlight: rgba(201, 161, 111, 0.32);
 
   /* ---- Typography ------------------------------------------------------- */
   --font-sans: "IBM Plex Sans Arabic", "Segoe UI", "Noto Sans Arabic", system-ui, -apple-system,
     "Helvetica Neue", Arial, sans-serif;
 
+  --fs-hero: clamp(2rem, 1.33rem + 2.75vw, 3.25rem); /* 32 → 52 */
   --fs-display: clamp(1.75rem, 1.28rem + 2.05vw, 2.5rem); /* 28 → 40 */
   --fs-2xl: clamp(1.3rem, 1.16rem + 0.6vw, 1.55rem); /* 21 → 25 */
   --fs-xl: 1.1875rem; /* 19 */
@@ -100,14 +121,14 @@
   /* ---- Radii ------------------------------------------------------------- */
   --r-sm: 8px;
   --r-md: 10px;
-  --r-lg: 14px;
-  --r-xl: 20px;
+  --r-lg: 16px;
+  --r-xl: 24px;
   --r-full: 999px;
 
   /* ---- Layout ------------------------------------------------------------ */
   --container: 1200px;
   --gutter: clamp(1rem, 0.55rem + 2.2vw, 2rem);
-  --header-h: 62px;
+  --header-h: 68px;
 
   /* ---- Motion ------------------------------------------------------------ */
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -119,50 +140,9 @@
 }
 
 /* ---- Dark theme ---------------------------------------------------------- */
-/* Defined for the explicit toggle AND for system preference, so all three
-   states (light / dark / system) resolve correctly. */
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: var(--navy-900);
-    --bg-alt: #101828;
-    --surface: #151e2f;
-    --surface-2: #1a2438;
-    --surface-sunken: #101828;
-
-    --border: #26314a;
-    --border-strong: #33415e;
-
-    --ink: #eef1f6;
-    --ink-2: #aab4c6;
-    --ink-3: #838ea2;
-    --ink-inverse: #0e1524;
-
-    --accent: #a6303c;
-    --accent-hover: #b93a46;
-    --accent-active: #8d2833;
-    --accent-soft: rgba(166, 48, 60, 0.16);
-    --accent-ink: #ffffff;
-
-    --gold: #ddb478;
-    --gold-soft: rgba(221, 180, 120, 0.14);
-    --gold-ink: #e8c894;
-
-    --focus: #e0b97f;
-    --focus-halo: rgba(224, 185, 127, 0.22);
-
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-2: 0 2px 10px -3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.35);
-    --shadow-3: 0 16px 40px -16px rgba(0, 0, 0, 0.7);
-    --shadow-sheet: 0 -12px 40px -12px rgba(0, 0, 0, 0.65);
-
-    --header-bg: rgba(16, 24, 40, 0.86);
-    --hero-wash: radial-gradient(120% 100% at 88% -20%, rgba(221, 180, 120, 0.11), transparent 58%),
-      radial-gradient(90% 90% at 8% -30%, rgba(166, 48, 60, 0.14), transparent 60%);
-
-    color-scheme: dark;
-  }
-}
+/* Light is the default for everyone. Dark is opt-in only, via the header
+   toggle, which stamps data-theme="dark" on <html>. The operating system's
+   preference is deliberately ignored. */
 
 :root[data-theme="dark"] {
   --bg: var(--navy-900);
@@ -198,8 +178,20 @@
   --shadow-sheet: 0 -12px 40px -12px rgba(0, 0, 0, 0.65);
 
   --header-bg: rgba(16, 24, 40, 0.86);
-  --hero-wash: radial-gradient(120% 100% at 88% -20%, rgba(221, 180, 120, 0.11), transparent 58%),
-    radial-gradient(90% 90% at 8% -30%, rgba(166, 48, 60, 0.14), transparent 60%);
+  --hero-wash: radial-gradient(70% 90% at 100% 0%, rgba(221, 180, 120, 0.12), transparent 62%),
+    radial-gradient(60% 80% at 0% 100%, rgba(166, 48, 60, 0.14), transparent 65%),
+    linear-gradient(180deg, #111a2b, var(--navy-900));
+  --dots: rgba(238, 241, 246, 0.06);
+
+  --accent-tint-ink: #f2b6bc;
+  --shadow-accent: 0 10px 20px -12px rgba(0, 0, 0, 0.7);
+
+  --strong-bg: linear-gradient(135deg, #2a3854, #1c2740);
+
+  --seal-rim: linear-gradient(150deg, #34425f, #1a2438);
+  --seal-line: rgba(221, 180, 120, 0.35);
+  --seal-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(221, 180, 120, 0.12);
+  --highlight: rgba(221, 180, 120, 0.24);
 
   color-scheme: dark;
 }

@@ -1,52 +1,122 @@
 /**
  * Device-local progress store.
  *
- * The dataset carries no per-student state, so "solved", "favourite" and "last
- * opened" live only in this browser's localStorage. Everything is wrapped
- * because storage throws in private windows and when site data is blocked —
- * in that case the app degrades to a stateless (but fully working) portal.
+ * The dataset carries no per-student state, so "done", "favourite", "opened"
+ * and the pending "did you finish?" check live only in this browser's
+ * localStorage. Every storage call is wrapped: storage throws in some private
+ * windows and when site data is blocked, and in that case the store keeps
+ * working in memory for the rest of the visit.
  */
 
 const KEY = 'arrab-qudurat:v1';
 
-const EMPTY = { v: 1, done: {}, fav: {}, opened: {}, last: 0 };
+/**
+ * A brand-new state object. Built by a function rather than spread from a
+ * shared constant: a shallow copy would share the nested maps, so "clearing"
+ * would hand back the very objects that still hold the old progress.
+ */
+const fresh = () => ({ v: 1, done: {}, fav: {}, opened: {}, last: 0, pending: null });
+
+const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+const isExamNumber = (value) => Number.isInteger(value) && value > 0;
+
+/** Keep only positive-integer keys; values become 1 (flags) or a timestamp. */
+function cleanMap(value, timestamps = false) {
+  const out = {};
+  if (!isRecord(value)) return out;
+  for (const [key, raw] of Object.entries(value)) {
+    const n = Number(key);
+    if (!isExamNumber(n)) continue;
+    if (timestamps) {
+      const at = Number(raw);
+      if (at > 0) out[n] = at;
+    } else if (raw) {
+      out[n] = 1;
+    }
+  }
+  return out;
+}
+
+/** Parse a stored entry defensively: anything malformed is dropped, not trusted. */
+function parse(raw) {
+  const parsed = JSON.parse(raw);
+  const next = fresh();
+  if (!isRecord(parsed)) return next;
+  next.done = cleanMap(parsed.done);
+  next.fav = cleanMap(parsed.fav);
+  next.opened = cleanMap(parsed.opened, true);
+  next.last = isExamNumber(parsed.last) ? parsed.last : 0;
+  const p = parsed.pending;
+  if (isRecord(p) && isExamNumber(p.n) && Number(p.at) > 0) {
+    next.pending = { n: p.n, at: Number(p.at) };
+  }
+  return next;
+}
 
 let available = true;
 let cache = null;
 
 function read() {
   if (cache) return cache;
-  if (!available) return (cache = { ...EMPTY });
+  cache = fresh();
 
+  let raw = null;
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return (cache = { ...EMPTY });
-    const parsed = JSON.parse(raw);
-    cache = {
-      v: 1,
-      done: parsed && typeof parsed.done === 'object' && parsed.done ? parsed.done : {},
-      fav: parsed && typeof parsed.fav === 'object' && parsed.fav ? parsed.fav : {},
-      opened: parsed && typeof parsed.opened === 'object' && parsed.opened ? parsed.opened : {},
-      last: Number(parsed?.last) || 0,
-    };
+    raw = localStorage.getItem(KEY);
   } catch {
-    available = false;
-    cache = { ...EMPTY };
+    available = false; // blocked storage: stay in memory
+    return cache;
+  }
+
+  if (raw) {
+    try {
+      cache = parse(raw);
+    } catch {
+      /* corrupted entry: start clean; the next write replaces it */
+    }
   }
   return cache;
 }
 
 let flushHandle = 0;
+
+function flush() {
+  clearTimeout(flushHandle);
+  flushHandle = 0;
+  if (!available || !cache) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(cache));
+  } catch {
+    available = false;
+  }
+}
+
+/** Coalesce bursts of changes; `flush()` runs early whenever the page is hidden. */
 function write() {
   if (!available) return;
   clearTimeout(flushHandle);
-  flushHandle = setTimeout(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(cache));
-    } catch {
-      available = false;
-    }
-  }, 120);
+  flushHandle = setTimeout(flush, 120);
+}
+
+const listeners = new Set();
+
+if (typeof window !== 'undefined') {
+  // Opening an exam hides this tab, and mobile browsers may discard a hidden
+  // tab without warning — so never leave a change sitting in the debounce.
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+
+  // Another tab of the portal changed progress: drop the stale copy and let
+  // the page repaint from the fresh one instead of overwriting it later.
+  window.addEventListener('storage', (event) => {
+    if (event.key !== KEY && event.key !== null) return;
+    clearTimeout(flushHandle);
+    flushHandle = 0;
+    cache = null;
+    listeners.forEach((fn) => fn());
+  });
 }
 
 export const store = {
@@ -64,13 +134,19 @@ export const store = {
   },
 
   /** @returns {boolean} the new state */
-  toggleDone(n) {
+  setDone(n, on) {
     const s = read();
-    const next = !s.done[n];
-    if (next) s.done[n] = 1;
+    if (on) s.done[n] = 1;
     else delete s.done[n];
+    // Answering the question in any way settles the pending check for it.
+    if (s.pending?.n === n) s.pending = null;
     write();
-    return next;
+    return Boolean(on);
+  },
+
+  /** @returns {boolean} the new state */
+  toggleDone(n) {
+    return this.setDone(n, !this.isDone(n));
   },
 
   /** @returns {boolean} the new state */
@@ -83,19 +159,13 @@ export const store = {
     return next;
   },
 
-  markOpened(n) {
+  /** Record that a form was opened, and queue a "did you finish?" check for it. */
+  markOpened(n, now = Date.now()) {
     const s = read();
-    s.opened[n] = Date.now();
+    s.opened[n] = now;
     s.last = n;
+    s.pending = s.done[n] ? null : { n, at: now };
     write();
-  },
-
-  get doneCount() {
-    return Object.keys(read().done).length;
-  },
-
-  get favCount() {
-    return Object.keys(read().fav).length;
   },
 
   get lastOpened() {
@@ -106,20 +176,62 @@ export const store = {
     return read().opened[n] || 0;
   },
 
-  /** Numbers ordered by most recently opened. */
-  recentNumbers() {
-    const { opened } = read();
-    return Object.keys(opened)
-      .map(Number)
-      .sort((a, b) => opened[b] - opened[a]);
+  /** @returns {{n: number, at: number} | null} */
+  get pending() {
+    return read().pending;
   },
 
+  clearPending() {
+    const s = read();
+    if (!s.pending) return;
+    s.pending = null;
+    write();
+  },
+
+  /** An independent deep copy, for undo. */
+  snapshot() {
+    return JSON.parse(JSON.stringify(read()));
+  },
+
+  restore(snapshot) {
+    cache = parse(JSON.stringify(snapshot));
+    write();
+  },
+
+  /**
+   * Forget completion history — done marks, opened times, the resume point and
+   * any pending check — but keep favourites, which the student chose on purpose.
+   */
+  resetProgress() {
+    const fav = { ...read().fav };
+    cache = { ...fresh(), fav };
+    write();
+  },
+
+  /** Wipe everything, favourites included. */
   clear() {
-    cache = { ...EMPTY };
+    clearTimeout(flushHandle);
+    flushHandle = 0;
+    cache = fresh();
     try {
       localStorage.removeItem(KEY);
     } catch {
-      /* nothing we can do; the in-memory cache is already reset */
+      /* the in-memory state is already clean */
     }
   },
+
+  /** Save anything pending, then drop the in-memory copy so the next read comes from storage. */
+  reload() {
+    if (flushHandle) flush();
+    cache = null;
+  },
+
+  /** Called after another tab changes the stored progress. */
+  subscribe(fn) {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  },
+
+  /** Write immediately (used by tests and before navigation). */
+  flush,
 };

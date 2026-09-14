@@ -280,7 +280,9 @@ function main() {
 
   const payload = {
     meta: {
-      project: raw?.project ?? null,
+      // The brand is always written without harakat («العراب», not «العِراب»),
+      // whatever the export happens to contain.
+      project: typeof raw?.project === 'string' ? raw.project.replace(/[ً-ْ]/g, '') : null,
       teacher: raw?.teacher ?? null,
       generated: raw?.generated ?? null,
       note: raw?.note ?? null,

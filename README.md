@@ -1,4 +1,4 @@
-# العِراب في القدرات — بوابة نماذج تجميعات اللفظي
+# العراب في القدرات — بوابة نماذج تجميعات اللفظي
 
 موقع ثابت بالكامل يجمع نماذج **تجميعات اللفظي** للأستاذ **أحمد طلعت ربيع** في صفحة واحدة،
 مع بحث فوري بالاسم أو بالرقم، وتصفية، ومتابعة تقدّم محفوظة على جهاز الطالب.
@@ -35,7 +35,7 @@ assets/
   js/app.js             state -> URL -> render; card building; filters; sheet
   js/ui.js              theme toggle + mobile nav (shared by all pages)
   fonts/                IBM Plex Sans Arabic, self-hosted and subset (tools/build-fonts.md)
-  img/                  logo variants, favicons, maskable icons, OG cover
+  img/                  logo seal (mark-*.webp), favicons, maskable icons, OG cover
   data/exams.json       GENERATED — do not edit by hand
 
 data/
@@ -180,11 +180,16 @@ Tokens live in `assets/css/tokens.css`. The palette was sampled from the brand m
 Rules the implementation follows:
 
 - **Burgundy is only ever used for the primary action.** Gold is an accent, never a
-  surface. Nothing else competes with «ابدأ الاختبار».
+  surface. On the exam cards, where «ابدأ الاختبار» repeats hundreds of times, the
+  button is a burgundy *tint* that fills solid on hover, so the grid stays calm.
 - **Minimum body size is 15px, minimum metadata size is 13px.** Nothing smaller.
 - **Every text colour meets WCAG AA (4.5:1)** against its own background, verified in
   both themes.
-- Three themes resolve correctly: explicit light, explicit dark, and system default.
+- **Light is the default for every visitor**, whatever their operating system is set to.
+  Dark is opt-in only, through the header toggle, and the choice is remembered.
+- **The logo always sits on a white disc** (`assets/img/mark-*.webp`, cut from the
+  original artwork) so it reads identically in both themes; only the rim, ring and
+  shadow around it adapt.
 
 ---
 
@@ -203,9 +208,27 @@ and the back button works. `#exam-47` deep-links to a specific form, loading mor
 batches if needed.
 
 **Progress is device-local.** «مُنجز», «المفضلة» and «آخر ما فتحت» are stored in
-`localStorage` only. Nothing is ever sent anywhere. Every storage call is wrapped, so
-a private window or blocked site data degrades to a working, stateless portal
-instead of an error.
+`localStorage` only (`assets/js/store.js`). Nothing is ever sent anywhere. Every
+storage call is wrapped, so a private window or blocked site data keeps working in
+memory instead of throwing. Stored data is sanitised on read, changes are written
+immediately when the tab is hidden, and a second open tab picks up changes through
+the `storage` event instead of overwriting them. `tools/test-store.mjs` covers all of it.
+
+**How "done" gets recorded.** A Google Form cannot tell the page it was submitted, so
+opening a form (card button, «أكمل/تابع» tile, random tile) queues a check. When the
+student comes back to the tab — at least 20 seconds later, within 7 days — a panel
+asks «هل أنهيت النموذج؟». «نعم» marks it done and offers the next unfinished form;
+«ليس بعد» dismisses it. The round checkbox on each card does the same by hand.
+
+- **Resume tile:** the last opened form if it is not done («أكمل»), otherwise the next
+  unfinished one after it («تابع»); on a fresh device the first form («ابدأ»).
+- **Random tile:** an unfinished form (never the one just opened), regardless of the
+  current search or filters.
+- **Status tabs** show live counts under the current range and search. Marking a card
+  inside a filtered tab updates it in place — the list is not rebuilt, so the student
+  keeps their scroll position.
+- **«مسح الإنجاز»** clears done marks and history but keeps favourites, and is undoable
+  from the toast.
 
 **Rendering is incremental.** 48 cards per batch, extended by an IntersectionObserver
 with an explicit «عرض المزيد» button as the accessible fallback.

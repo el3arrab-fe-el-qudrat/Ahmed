@@ -77,7 +77,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`\n  العِراب في القدرات — preview\n`);
+  console.log(`\n  العراب في القدرات — preview\n`);
   console.log(`  http://${HOST}:${PORT}/\n`);
   console.log(`  serving ${ROOT}`);
   console.log(`  press Ctrl+C to stop\n`);

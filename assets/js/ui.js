@@ -6,10 +6,9 @@
 
 const THEME_KEY = 'arrab-qudurat:theme';
 
+/** Light unless the visitor has explicitly switched to dark. The OS setting is ignored. */
 function currentTheme() {
-  const explicit = document.documentElement.getAttribute('data-theme');
-  if (explicit === 'light' || explicit === 'dark') return explicit;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 }
 
 /** Point the toggle at whatever switching would do next. Never writes state. */
@@ -36,16 +35,7 @@ function initTheme() {
   const button = document.getElementById('themeToggle');
   if (!button) return;
 
-  // Deliberately does NOT stamp data-theme on load. Writing the resolved value
-  // here would freeze a visitor who never touched the toggle into whichever
-  // scheme their OS happened to be in on their first visit.
   syncThemeButton(button);
-
-  window
-    .matchMedia('(prefers-color-scheme: dark)')
-    .addEventListener('change', () => {
-      if (!document.documentElement.hasAttribute('data-theme')) syncThemeButton(button);
-    });
 
   button.addEventListener('click', () => {
     setTheme(currentTheme() === 'dark' ? 'light' : 'dark', button);

@@ -74,6 +74,9 @@ jobs:
       - name: Run search and data tests
         run: node tools/test-search.mjs
 
+      - name: Run progress store tests
+        run: node tools/test-store.mjs
+
       - name: Validate every exam link resolves
         run: node tools/check-links.mjs --offline
 

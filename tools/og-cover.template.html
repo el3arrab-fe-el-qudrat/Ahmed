@@ -20,24 +20,39 @@
       }
       @font-face {
         font-family: "Plex AR";
+        src: url("http://127.0.0.1:5177/assets/fonts/plex-ar-500.woff2") format("woff2");
+        font-weight: 500;
+      }
+      @font-face {
+        font-family: "Plex AR";
         src: url("http://127.0.0.1:5177/assets/fonts/plex-ar-400.woff2") format("woff2");
         font-weight: 400;
       }
       * { margin: 0; box-sizing: border-box; }
       body {
+        position: relative;
         width: 1200px;
         height: 630px;
         overflow: hidden;
         display: flex;
         align-items: center;
-        gap: 56px;
-        padding: 0 84px;
-        background: #101828;
+        gap: 72px;
+        padding: 0 88px;
+        background: #f7f5f1;
         background-image:
-          radial-gradient(60% 120% at 88% -10%, rgba(201, 161, 111, 0.24), transparent 60%),
-          radial-gradient(70% 120% at 6% 110%, rgba(122, 34, 41, 0.34), transparent 62%);
-        color: #eef1f6;
+          radial-gradient(70% 90% at 100% 0%, rgba(180, 133, 79, 0.2), transparent 62%),
+          radial-gradient(60% 80% at 0% 100%, rgba(122, 34, 41, 0.09), transparent 65%);
+        color: #182234;
         font-family: "Plex AR", "Segoe UI", sans-serif;
+      }
+      body::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(rgba(24, 34, 52, 0.09) 1.3px, transparent 1.6px);
+        background-size: 26px 26px;
+        -webkit-mask-image: radial-gradient(45% 75% at 20% 50%, #000, transparent 75%);
+        mask-image: radial-gradient(45% 75% at 20% 50%, #000, transparent 75%);
       }
       .rule {
         position: absolute;
@@ -46,44 +61,84 @@
         height: 8px;
         background: linear-gradient(90deg, #7a2229, #b4854f 55%, #c9a16f);
       }
-      .logo { width: 250px; height: 250px; object-fit: contain; flex: none; }
-      .copy { min-width: 0; }
+      .copy { position: relative; flex: 1 1 auto; min-width: 0; }
       .eyebrow {
         display: inline-flex;
         align-items: center;
         gap: 12px;
         padding: 8px 20px;
         margin-block-end: 26px;
-        border: 1px solid rgba(201, 161, 111, 0.45);
+        background: #fff;
+        border: 1px solid #e6e1d8;
         border-radius: 999px;
         font-size: 22px;
-        color: #ddb478;
+        font-weight: 500;
+        color: #55607a;
       }
       .eyebrow::before {
         content: "";
-        width: 10px; height: 10px; border-radius: 50%; background: #c9a16f;
+        width: 10px; height: 10px; border-radius: 50%; background: #a87538;
+        box-shadow: 0 0 0 4px #f7efe2;
       }
-      h1 { font-size: 68px; line-height: 1.18; letter-spacing: -0.02em; font-weight: 700; }
-      h1 em { font-style: normal; color: #e08d97; }
-      p.lead { margin-block-start: 20px; font-size: 27px; line-height: 1.5; color: #aab4c6; font-weight: 400; }
-      .stats { display: flex; gap: 40px; margin-block-start: 36px; }
-      .stat b { display: block; font-size: 42px; font-weight: 700; letter-spacing: -0.02em; }
-      .stat span { font-size: 20px; color: #8b95a8; font-weight: 400; }
-      .teacher {
+      h1 { font-size: 66px; line-height: 1.22; letter-spacing: -0.015em; font-weight: 700; }
+      h1 em {
+        font-style: normal;
+        color: #7a2229;
+        background-image: linear-gradient(rgba(201, 161, 111, 0.34), rgba(201, 161, 111, 0.34));
+        background-repeat: no-repeat;
+        background-size: 100% 0.3em;
+        background-position: 0 86%;
+      }
+      p.lead { margin-block-start: 18px; font-size: 27px; line-height: 1.5; color: #55607a; font-weight: 400; }
+      .stats { display: flex; margin-block-start: 34px; }
+      .stat { padding-inline: 28px; }
+      .stat:first-child { padding-inline-start: 0; }
+      .stat + .stat { border-inline-start: 1px solid #d6cfc2; }
+      .stat b { display: block; font-size: 40px; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; }
+      .stat span { font-size: 19px; color: #656e82; font-weight: 400; }
+
+      .brand { position: relative; flex: none; padding-block-end: 22px; }
+      .seal {
+        position: relative;
+        width: 330px;
+        height: 330px;
+        padding: 11px;
+        border-radius: 50%;
+        background: linear-gradient(150deg, #ffffff 25%, #efe3cf);
+        box-shadow: 0 34px 64px -30px rgba(24, 34, 52, 0.45), 0 10px 22px -14px rgba(122, 34, 41, 0.26);
+      }
+      .seal::before, .seal::after { content: ""; position: absolute; border-radius: 50%; }
+      .seal::before { inset: -22px; border: 2px dashed rgba(168, 117, 56, 0.34); }
+      .seal::after { inset: -44px; border: 1px solid rgba(168, 117, 56, 0.16); }
+      .seal img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 0 1px rgba(168, 117, 56, 0.3);
+      }
+      .caption {
         position: absolute;
-        inset-block-end: 40px;
-        inset-inline-start: 84px;
+        inset-block-end: 0;
+        inset-inline-start: 50%;
+        transform: translateX(50%);
+        padding: 9px 22px;
+        background: #fff;
+        border: 1px solid #e6e1d8;
+        border-radius: 999px;
+        box-shadow: 0 8px 20px -10px rgba(24, 34, 52, 0.3);
         font-size: 21px;
-        color: #8b95a8;
-        font-weight: 400;
+        font-weight: 700;
+        white-space: nowrap;
       }
+      .caption span { font-weight: 500; color: #656e82; }
     </style>
   </head>
   <body>
     <div class="rule"></div>
-    <img class="logo" src="http://127.0.0.1:5177/assets/img/logo-256.png" alt="" />
     <div class="copy">
-      <span class="eyebrow">تجميعات اللفظي · نماذج إلكترونية</span>
+      <span class="eyebrow">العراب في القدرات · تجميعات اللفظي</span>
       <h1>كل نماذج التجميعات<br /><em>في مكان واحد</em></h1>
       <p class="lead">ابحث عن النموذج باسمه أو برقمه، وابدأ الاختبار مباشرة.</p>
       <div class="stats">
@@ -92,6 +147,11 @@
         <div class="stat"><b>13</b><span>سؤالًا لكل نموذج</span></div>
       </div>
     </div>
-    <p class="teacher">العِراب في القدرات — الأستاذ / أحمد طلعت ربيع</p>
+    <div class="brand">
+      <div class="seal">
+        <img src="http://127.0.0.1:5177/assets/img/mark-560.webp" alt="" />
+      </div>
+      <p class="caption"><span>الأستاذ /</span> أحمد طلعت ربيع</p>
+    </div>
   </body>
 </html>

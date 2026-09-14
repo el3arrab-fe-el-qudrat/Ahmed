@@ -1,10 +1,14 @@
 /**
- * العِراب في القدرات — exam portal
+ * العراب في القدرات — exam portal
  *
  * Static, data-driven, no framework. State lives in one object, is mirrored to
  * the URL (so any view is shareable and the back button works), and drives a
  * single render pass. Cards are cloned from a <template> and appended in
  * batches so 300+ records never block the first paint.
+ *
+ * Progress (done / favourite / opened) never re-renders the list: a change
+ * repaints only the affected card, the counters and the quick-access tiles, so
+ * a student deep in the grid never loses their place.
  */
 
 import { parseQuery, searchExams, highlightRanges } from './search.js';
@@ -12,6 +16,11 @@ import { store } from './store.js';
 
 const PAGE_SIZE = 48;
 const DATA_URL = new URL('../data/exams.json', import.meta.url);
+
+/** Coming straight back means the form was probably not sat yet: ask later. */
+const CHECKIN_MIN_AWAY_MS = 20 * 1000;
+/** Past this, a forgotten "did you finish?" is stale and silently dropped. */
+const CHECKIN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /* -------------------------------------------------------------------------- */
 /* Element lookup                                                              */
@@ -29,6 +38,9 @@ const el = {
   count: $('#resultCount'),
   countLive: $('#resultCountLive'),
   empty: $('#emptyState'),
+  emptyIcon: $('#emptyIcon'),
+  emptyTitle: $('#emptyTitle'),
+  emptyLead: $('#emptyLead'),
   emptyTerm: $('#emptyTerm'),
   suggestions: $('#emptySuggestions'),
   error: $('#errorState'),
@@ -56,6 +68,7 @@ const el = {
   progressBar: $('#progressBar'),
   progressFill: $('#progressFill'),
   progressLabel: $('#progressLabel'),
+  progressPct: $('#progressPct'),
   progressReset: $('#progressReset'),
   tileResume: $('#tileResume'),
   tileResumeLabel: $('#tileResumeLabel'),
@@ -66,8 +79,15 @@ const el = {
   tileFavMeta: $('#tileFavMeta'),
   tileRandom: $('#tileRandom'),
   tileRandomMeta: $('#tileRandomMeta'),
+  checkin: $('#checkin'),
+  checkinNumber: $('#checkinNumber'),
+  checkinMeta: $('#checkinMeta'),
+  checkinYes: $('#checkinYes'),
+  checkinNo: $('#checkinNo'),
+  checkinLive: $('#checkinLive'),
   toast: $('#toast'),
   toastText: $('#toastText'),
+  toastActions: $('#toastActions'),
   statTotal: $$('[data-stat="total"]'),
   statQuestions: $$('[data-stat="questions"]'),
   statUpdated: $$('[data-stat="updated"]'),
@@ -82,10 +102,16 @@ const DEFAULTS = { q: '', range: 'all', status: 'all', sort: 'number-asc' };
 const state = {
   ...DEFAULTS,
   data: null,
+  /** Every exam, ascending by number. */
+  ordered: [],
+  /** number -> exam */
+  byNumber: new Map(),
   query: parseQuery(''),
   results: [],
   fuzzy: false,
   shown: 0,
+  /** Result count per status tab, under the current range and search. */
+  counts: { all: 0, todo: 0, done: 0, fav: 0 },
 };
 
 /* -------------------------------------------------------------------------- */
@@ -124,6 +150,43 @@ function formatDate(iso) {
   }
 }
 
+/**
+ * Progress as a percentage that never overstates: floored, with one decimal
+ * below 10 so the first finished form reads "0.3٪" rather than "0٪".
+ */
+function percentText(done, total) {
+  if (!total || done <= 0) return '0٪';
+  if (done >= total) return '100٪';
+  const pct = (done / total) * 100;
+  const value = pct < 10 ? Math.floor(pct * 10) / 10 : Math.floor(pct);
+  return `${arabicNumber(value)}٪`;
+}
+
+const TIME_UNITS = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+let relativeFormat = null;
+try {
+  relativeFormat = new Intl.RelativeTimeFormat('ar-EG-u-nu-latn', { numeric: 'auto' });
+} catch {
+  /* very old engines: the "opened" hint simply omits the time */
+}
+
+/** "الآن", "قبل 5 دقائق", "أمس", "الأسبوع الماضي"… */
+function timeAgo(timestamp) {
+  const seconds = (timestamp - Date.now()) / 1000;
+  if (Math.abs(seconds) < 60 || !relativeFormat) return 'الآن';
+  for (const [unit, size] of TIME_UNITS) {
+    if (Math.abs(seconds) >= size) return relativeFormat.format(Math.round(seconds / size), unit);
+  }
+  return 'الآن';
+}
 
 /* -------------------------------------------------------------------------- */
 /* Arabic number agreement                                                     */
@@ -194,19 +257,64 @@ function debounce(fn, wait) {
   };
 }
 
-let toastHandle = 0;
-function toast(message) {
-  if (!el.toast) return;
-  el.toastText.textContent = message;
-  el.toast.classList.add('toast--visible');
-  clearTimeout(toastHandle);
-  toastHandle = setTimeout(() => el.toast.classList.remove('toast--visible'), 2400);
-}
-
 function parseRange(value) {
   const match = /^(\d+)-(\d+)$/.exec(value || '');
   if (!match) return null;
   return { from: Number(match[1]), to: Number(match[2]) };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Toast — a short status line with at most one action (undo, next form…)     */
+/* -------------------------------------------------------------------------- */
+
+let toastHandle = 0;
+
+function hideToast() {
+  clearTimeout(toastHandle);
+  const hadFocus = el.toast.contains(document.activeElement);
+  el.toast.classList.remove('toast--visible');
+  el.toastActions.replaceChildren();
+  el.toastActions.hidden = true;
+  if (hadFocus) document.activeElement.blur();
+}
+
+function scheduleToastHide(ms) {
+  clearTimeout(toastHandle);
+  toastHandle = setTimeout(hideToast, ms);
+}
+
+/**
+ * @param {string} message
+ * @param {{ duration?: number, action?: { label: string, href?: string, onClick?: () => void } }} [options]
+ * @returns {HTMLElement | null} the action element, if any
+ */
+function toast(message, { duration = 2600, action = null } = {}) {
+  if (!el.toast) return null;
+  el.toastText.textContent = message;
+  el.toastActions.replaceChildren();
+
+  let actionNode = null;
+  if (action) {
+    actionNode = action.href
+      ? Object.assign(document.createElement('a'), {
+          href: action.href,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        })
+      : Object.assign(document.createElement('button'), { type: 'button' });
+    actionNode.className = 'toast__action';
+    actionNode.textContent = action.label;
+    actionNode.addEventListener('click', () => {
+      hideToast();
+      action.onClick?.();
+    });
+    el.toastActions.append(actionNode);
+  }
+
+  el.toastActions.hidden = !action;
+  el.toast.classList.add('toast--visible');
+  scheduleToastHide(duration);
+  return actionNode;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -241,6 +349,13 @@ const syncUrl = debounce(() => {
 /* Filtering                                                                   */
 /* -------------------------------------------------------------------------- */
 
+const STATUS_FILTERS = {
+  all: null,
+  todo: (exam) => !store.isDone(exam.n),
+  done: (exam) => store.isDone(exam.n),
+  fav: (exam) => store.isFav(exam.n),
+};
+
 /** Only the controls that actually live inside the mobile sheet. */
 function sheetFilterCount() {
   let n = 0;
@@ -249,20 +364,31 @@ function sheetFilterCount() {
   return n;
 }
 
-function compute() {
-  const all = state.data?.exams ?? [];
-
-  let pool = all;
+function rangePool() {
+  const all = state.ordered;
   const range = parseRange(state.range);
-  if (range) pool = pool.filter((e) => e.n >= range.from && e.n <= range.to);
+  return range ? all.filter((e) => e.n >= range.from && e.n <= range.to) : all;
+}
 
-  if (state.status === 'done') pool = pool.filter((e) => store.isDone(e.n));
-  else if (state.status === 'todo') pool = pool.filter((e) => !store.isDone(e.n));
-  else if (state.status === 'fav') pool = pool.filter((e) => store.isFav(e.n));
+function searchWithin(pool, status) {
+  const test = STATUS_FILTERS[status];
+  return searchExams(test ? pool.filter(test) : pool, state.query);
+}
 
+/** Recount every status tab exactly as selecting it would filter. */
+function countStatuses(pool = rangePool()) {
+  for (const status of Object.keys(STATUS_FILTERS)) {
+    state.counts[status] = searchWithin(pool, status).results.length;
+  }
+}
+
+function compute() {
+  const pool = rangePool();
   state.query = parseQuery(state.q);
-  const { results, fuzzy } = searchExams(pool, state.query);
+
+  const { results, fuzzy } = searchWithin(pool, state.status);
   state.fuzzy = fuzzy;
+  countStatuses(pool);
 
   // A text query is already ranked by relevance; only re-sort when the user
   // explicitly picked an order or the query is empty.
@@ -305,6 +431,51 @@ function paintTitle(node, exam) {
   node.replaceChildren(fragment);
 }
 
+/** Everything on a card that depends on progress. Safe to call any time. */
+function paintCardState(node) {
+  const n = Number(node.dataset.n);
+  const exam = state.byNumber.get(n);
+  if (!exam) return;
+
+  const done = store.isDone(n);
+  const fav = store.isFav(n);
+  const number = arabicNumber(n);
+
+  node.classList.toggle('card--done', done);
+
+  const toggle = $('.card__toggle', node);
+  const toggleText = done ? 'إلغاء تحديد الإنجاز' : 'تحديد كمُنجز';
+  toggle.setAttribute('aria-pressed', String(done));
+  toggle.setAttribute('aria-label', `${toggleText} — النموذج ${number}`);
+  toggle.title = toggleText;
+
+  const favButton = $('.card__fav', node);
+  const favText = fav ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة';
+  favButton.setAttribute('aria-pressed', String(fav));
+  favButton.setAttribute('aria-label', `${favText} — النموذج ${number}`);
+  favButton.title = favText;
+
+  // Status line: "done" wins; otherwise say when it was last opened, so a
+  // form that was started but never marked is easy to spot.
+  const status = $('[data-meta="status"]', node);
+  const openedAt = store.openedAt(n);
+  if (done || openedAt) {
+    status.hidden = false;
+    status.classList.toggle('card__status--done', done);
+    $('use', status).setAttribute('href', done ? '#i-check' : '#i-clock');
+    $('[data-field="status"]', status).textContent = done ? 'مُنجز' : `فتحته ${timeAgo(openedAt)}`;
+  } else {
+    status.hidden = true;
+  }
+
+  const cta = $('a.card__cta', node);
+  if (cta) {
+    const verb = done ? 'أعد الاختبار' : 'ابدأ الاختبار';
+    $('.card__cta-label', cta).textContent = verb;
+    cta.setAttribute('aria-label', `${verb} — النموذج ${number}: ${exam.t}`);
+  }
+}
+
 function buildCard(exam) {
   const node = el.template.content.firstElementChild.cloneNode(true);
   const url = examUrl(exam);
@@ -323,11 +494,6 @@ function buildCard(exam) {
   const cta = $('.card__cta', node);
   if (url && isSafeUrl(url)) {
     cta.href = url;
-    cta.setAttribute('aria-label', `ابدأ الاختبار — النموذج ${arabicNumber(exam.n)}: ${exam.t}`);
-    cta.addEventListener('click', () => {
-      store.markOpened(exam.n);
-      refreshQuickAccess();
-    });
   } else {
     // A record with no usable link is never offered as an active exam.
     cta.replaceWith(
@@ -339,63 +505,33 @@ function buildCard(exam) {
     node.dataset.broken = 'true';
   }
 
-  const fav = $('.card__fav', node);
-  fav.setAttribute('aria-pressed', String(store.isFav(exam.n)));
-  const syncFavLabel = (on) => {
-    const text = on ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة';
-    fav.setAttribute('aria-label', `${text} — النموذج ${arabicNumber(exam.n)}`);
-    fav.title = text;
-  };
-  syncFavLabel(store.isFav(exam.n));
-  fav.addEventListener('click', () => {
-    const on = store.toggleFav(exam.n);
-    fav.setAttribute('aria-pressed', String(on));
-    syncFavLabel(on);
-    toast(on ? 'أُضيف إلى المفضلة' : 'أُزيل من المفضلة');
-    refreshQuickAccess();
-    if (state.status === 'fav') scheduleRerender();
-  });
-
-  const done = $('.card__toggle', node);
-  done.setAttribute('aria-pressed', String(store.isDone(exam.n)));
-  const syncDoneLabel = (on) => {
-    const text = on ? 'إلغاء تحديد الإنجاز' : 'تحديد كمُنجز';
-    done.setAttribute('aria-label', `${text} — النموذج ${arabicNumber(exam.n)}`);
-    done.title = text;
-  };
-  syncDoneLabel(store.isDone(exam.n));
-  done.addEventListener('click', () => {
-    const on = store.toggleDone(exam.n);
-    done.setAttribute('aria-pressed', String(on));
-    syncDoneLabel(on);
-    node.classList.toggle('card--done', on);
-    toast(on ? 'تم تحديد النموذج كمُنجز' : 'أُلغي تحديد النموذج');
-    refreshQuickAccess();
-    if (state.status === 'done' || state.status === 'todo') scheduleRerender();
-  });
-
   const copy = $('.card__copy', node);
   copy.setAttribute('aria-label', `نسخ رابط النموذج ${arabicNumber(exam.n)}`);
   copy.title = 'نسخ رابط النموذج';
-  copy.addEventListener('click', async () => {
-    const link = examShortUrl(exam);
-    if (!link || !isSafeUrl(link)) return;
-    try {
-      await navigator.clipboard.writeText(link);
-      toast('نُسخ رابط النموذج');
-    } catch {
-      window.prompt('انسخ الرابط:', link);
-    }
-  });
 
-  node.classList.toggle('card--done', store.isDone(exam.n));
+  paintCardState(node);
   return node;
 }
 
-const scheduleRerender = debounce(() => {
-  compute();
-  render();
-}, 220);
+function syncCard(n) {
+  const node = document.getElementById(`exam-${n}`);
+  if (node) paintCardState(node);
+}
+
+function repaintCards() {
+  $$('.card', el.grid).forEach(paintCardState);
+}
+
+async function copyExamLink(exam) {
+  const link = examShortUrl(exam);
+  if (!link || !isSafeUrl(link)) return;
+  try {
+    await navigator.clipboard.writeText(link);
+    toast('نُسخ رابط النموذج');
+  } catch {
+    window.prompt('انسخ الرابط:', link);
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 /* Rendering                                                                   */
@@ -421,7 +557,7 @@ function appendBatch() {
 }
 
 function renderCount() {
-  const total = state.data?.exams?.length ?? 0;
+  const total = state.ordered.length;
   const n = state.results.length;
   const text =
     n === total
@@ -483,6 +619,25 @@ function renderActiveFilters() {
   el.sheetBadge.textContent = arabicNumber(count);
 }
 
+/** Empty views that are about the student's own lists get their own guidance. */
+const STATUS_EMPTY = {
+  fav: {
+    icon: 'i-heart',
+    title: 'لا توجد نماذج في المفضلة',
+    lead: 'اضغط على أيقونة القلب في أي بطاقة لحفظ النموذج هنا والرجوع إليه بسرعة.',
+  },
+  done: {
+    icon: 'i-check',
+    title: 'لم تُحدِّد أي نموذج كمُنجز بعد',
+    lead: 'بعد أن تنهي اختبارًا اضغط على دائرة الإنجاز في بطاقته، أو أجب بـ«نعم» حين نسألك عند عودتك إلى الصفحة.',
+  },
+  todo: {
+    icon: 'i-check',
+    title: 'أنجزت جميع النماذج',
+    lead: 'أحسنت. يمكنك مراجعة أي نموذج من تبويب «الكل» في أي وقت.',
+  },
+};
+
 function renderEmptyState() {
   const hasResults = state.results.length > 0;
   el.empty.hidden = hasResults;
@@ -491,18 +646,25 @@ function renderEmptyState() {
   if (hasResults) return;
 
   const term = state.q.trim();
+  const listOnly = !term && state.range === 'all' && STATUS_EMPTY[state.status];
+
+  const copy = listOnly || {
+    icon: 'i-inbox',
+    title: 'لا توجد نتائج',
+    lead: term ? 'لم نجد نموذجًا مطابقًا لـ' : 'لا توجد نماذج ضمن عوامل التصفية الحالية.',
+  };
+  el.emptyIcon.setAttribute('href', `#${copy.icon}`);
+  el.emptyTitle.textContent = copy.title;
+  el.emptyLead.textContent = copy.lead;
   el.emptyTerm.textContent = term;
   el.emptyTerm.hidden = !term;
-  $('#emptyLead').textContent = term
-    ? 'لم نجد نموذجًا مطابقًا لـ'
-    : 'لا توجد نماذج ضمن عوامل التصفية الحالية.';
 
   // Suggest the closest numbers so a mistyped number is still one click away.
   el.suggestions.replaceChildren();
   const digits = state.query.digits;
   if (digits && state.data) {
     const target = Number(digits);
-    const nearest = state.data.exams
+    const nearest = state.ordered
       .map((e) => ({ e, d: Math.abs(e.n - target) }))
       .sort((a, b) => a.d - b.d)
       .slice(0, 4);
@@ -535,11 +697,19 @@ function renderChips() {
   });
 }
 
+function renderStatusCounts() {
+  $$('[data-status]', el.statusGroup).forEach((button) => {
+    const badge = $('.segmented__count', button);
+    if (badge) badge.textContent = arabicNumber(state.counts[button.dataset.status] ?? 0);
+  });
+}
+
 function renderControls() {
   el.sortSelect.value = state.sort;
-  $$('[data-status]', el.statusGroup).forEach((btn) => {
-    btn.setAttribute('aria-pressed', String(btn.dataset.status === state.status));
+  $$('[data-status]', el.statusGroup).forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.status === state.status));
   });
+  renderStatusCounts();
 }
 
 function render() {
@@ -558,68 +728,262 @@ function applyChange({ scroll = false } = {}) {
   compute();
   render();
   syncUrl();
-  if (scroll) {
-    document.getElementById('exams')?.scrollIntoView({ block: 'start' });
+  if (scroll) scrollToResults();
+}
+
+/** Bring the top of the list into view — only if the student is below it. */
+function keepResultsInView() {
+  const section = document.getElementById('exams');
+  if (section && section.getBoundingClientRect().top < 0) scrollToResults();
+}
+
+function scrollToResults() {
+  document.getElementById('exams')?.scrollIntoView({ block: 'start' });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Progress                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Counted against the published dataset, so stale numbers never inflate it. */
+function progressStats() {
+  let done = 0;
+  let fav = 0;
+  for (const exam of state.ordered) {
+    if (store.isDone(exam.n)) done += 1;
+    if (store.isFav(exam.n)) fav += 1;
   }
+  const total = state.ordered.length;
+  return { total, done, fav, todo: total - done };
 }
 
-/* -------------------------------------------------------------------------- */
-/* Quick access                                                                */
-/* -------------------------------------------------------------------------- */
+/**
+ * Where "resume" should take the student:
+ *  - the last form they opened, if they have not marked it done ("أكمل")
+ *  - otherwise the first unfinished form after it ("تابع")
+ *  - otherwise the first unfinished form at all ("ابدأ" on a fresh device)
+ *  - nothing, once every form is done.
+ */
+function resumeTarget() {
+  const exams = state.ordered;
+  const last = state.byNumber.get(store.lastOpened);
+  if (last && !store.isDone(last.n)) return { exam: last, mode: 'continue' };
 
-function nextUnsolved() {
-  const exams = state.data?.exams ?? [];
+  const after = last ? exams.find((e) => e.n > last.n && !store.isDone(e.n)) : null;
+  const next = after || exams.find((e) => !store.isDone(e.n));
+  if (!next) return { exam: null, mode: 'complete' };
+
+  const started = Boolean(last) || exams.some((e) => store.isDone(e.n));
+  return { exam: next, mode: started ? 'next' : 'start' };
+}
+
+/** A form not yet done (never the one just opened); any form once all are done. */
+function randomTarget() {
+  const exams = state.ordered;
   const last = store.lastOpened;
-  const after = exams.find((e) => e.n > last && !store.isDone(e.n));
-  return after || exams.find((e) => !store.isDone(e.n)) || exams[0] || null;
+  const todo = exams.filter((e) => !store.isDone(e.n) && e.n !== last);
+  const pool = todo.length ? todo : exams.filter((e) => e.n !== last);
+  const from = pool.length ? pool : exams;
+  return from.length ? from[Math.floor(Math.random() * from.length)] : null;
 }
+
+function pointTileAt(tile, exam, label) {
+  if (!exam) {
+    tile.removeAttribute('href');
+    delete tile.dataset.target;
+    return;
+  }
+  tile.href = examUrl(exam);
+  tile.dataset.target = String(exam.n);
+  tile.setAttribute('aria-label', `${label} — ${exam.t} (يفتح في تبويب جديد)`);
+}
+
+const RESUME_LABELS = {
+  start: (n) => `ابدأ بالنموذج ${n}`,
+  continue: (n) => `أكمل النموذج ${n}`,
+  next: (n) => `تابع بالنموذج ${n}`,
+};
 
 function refreshQuickAccess() {
-  const exams = state.data?.exams ?? [];
-  if (!exams.length) return;
-
-  const doneCount = store.doneCount;
-  const favCount = store.favCount;
-  const total = exams.length;
+  if (!state.ordered.length) return;
+  const stats = progressStats();
 
   if (store.isAvailable) {
-    el.progress.hidden = doneCount === 0;
-    const pct = total ? Math.round((doneCount / total) * 100) : 0;
-    // A rounded 1% of a wide track renders as nothing at all; keep a visible
+    el.progress.hidden = stats.done === 0;
+    const pct = stats.total ? (stats.done / stats.total) * 100 : 0;
+    const pctText = percentText(stats.done, stats.total);
+    // A tiny share of a wide track renders as nothing at all; keep a visible
     // sliver so "some progress" never looks like "no progress".
-    el.progressFill.style.width = pct > 0 ? `max(${pct}%, 8px)` : '0';
-    el.progressLabel.textContent = `أنجزتَ ${arabicNumber(doneCount)} من ${countPhrase(
-      total,
+    el.progressFill.style.width = pct > 0 ? `max(${pct.toFixed(2)}%, 8px)` : '0';
+    el.progressLabel.textContent = `أنجزتَ ${arabicNumber(stats.done)} من ${countPhrase(
+      stats.total,
       'exam',
-    )} (${arabicNumber(pct)}٪)`;
-    el.progressBar.setAttribute('aria-valuenow', String(pct));
+    )}`;
+    el.progressPct.textContent = pctText;
+    el.progressBar.setAttribute('aria-valuenow', pct.toFixed(1));
     el.progressBar.setAttribute(
       'aria-valuetext',
-      `${arabicNumber(doneCount)} من ${arabicNumber(total)}`,
+      `${arabicNumber(stats.done)} من ${arabicNumber(stats.total)} (${pctText})`,
     );
   } else {
     el.progress.hidden = true;
   }
 
-  const next = nextUnsolved();
-  if (next) {
-    const resuming = store.lastOpened > 0 || doneCount > 0;
-    el.tileResumeLabel.textContent = resuming
-      ? `تابع من النموذج ${arabicNumber(next.n)}`
-      : `ابدأ من النموذج ${arabicNumber(next.n)}`;
-    el.tileResumeMeta.textContent = next.t;
-    el.tileResume.dataset.target = String(next.n);
+  const resume = resumeTarget();
+  if (resume.exam) {
+    const label = RESUME_LABELS[resume.mode](arabicNumber(resume.exam.n));
+    el.tileResumeLabel.textContent = label;
+    el.tileResumeMeta.textContent = resume.exam.t;
+    pointTileAt(el.tileResume, resume.exam, label);
+  } else {
+    const review = randomTarget();
+    el.tileResumeLabel.textContent = 'أنجزت جميع النماذج';
+    el.tileResumeMeta.textContent = 'راجِع نموذجًا عشوائيًا';
+    pointTileAt(el.tileResume, review, 'مراجعة نموذج عشوائي');
   }
 
-  const todo = total - doneCount;
-  el.tileTodoMeta.textContent = todo
-    ? `بقي لك ${countPhrase(todo, 'exam')}`
-    : 'أنجزتَ جميع النماذج';
-  el.tileFavMeta.textContent = favCount
-    ? `${countPhrase(favCount, 'exam')} في المفضلة`
-    : 'لم تحفظ أي نموذج بعد';
-  el.tileRandomMeta.textContent = 'يفتح فورًا في تبويب جديد';
+  if (stats.todo === 0) el.tileTodoMeta.textContent = 'أنجزت جميع النماذج';
+  else if (stats.done === 0) el.tileTodoMeta.textContent = 'علِّم ما تُنجزه لتتابع الباقي';
+  else el.tileTodoMeta.textContent = `بقي لك ${countPhrase(stats.todo, 'exam')}`;
+
+  el.tileFavMeta.textContent = stats.fav
+    ? `${countPhrase(stats.fav, 'exam')} في المفضلة`
+    : 'احفظ أي نموذج بالضغط على القلب';
+
+  el.tileRandomMeta.textContent =
+    stats.done > 0 && stats.todo > 0 ? 'من النماذج التي لم تُنجزها' : 'يفتح فورًا في تبويب جديد';
+  pointTileAt(el.tileRandom, randomTarget(), 'نموذج عشوائي');
 }
+
+/** Counters, tiles and tabs — everything except the list itself. */
+function refreshProgress() {
+  refreshQuickAccess();
+  countStatuses();
+  renderStatusCounts();
+}
+
+function setDone(n, on, { announce = true } = {}) {
+  store.setDone(n, on);
+  if (el.checkin.dataset.n === String(n)) hideCheckin();
+  syncCard(n);
+  refreshProgress();
+  if (announce) {
+    toast(on ? `سُجِّل النموذج ${arabicNumber(n)} كمُنجز` : `أُلغي تحديد النموذج ${arabicNumber(n)}`);
+  }
+}
+
+function toggleFav(n) {
+  const on = store.toggleFav(n);
+  syncCard(n);
+  refreshProgress();
+  toast(on ? 'أُضيف إلى المفضلة' : 'أُزيل من المفضلة');
+}
+
+/**
+ * Called from the click on any link that opens a form. UI updates are
+ * deferred: re-pointing a tile's href inside its own click handler would make
+ * the browser open the *new* target instead of the one that was clicked.
+ */
+function examOpened(n) {
+  store.markOpened(n);
+  store.flush();
+  hideCheckin();
+  setTimeout(() => {
+    syncCard(n);
+    refreshProgress();
+  }, 0);
+}
+
+/* -------------------------------------------------------------------------- */
+/* "Did you finish?" check-in                                                  */
+/*                                                                             */
+/* A Google Form cannot tell this page it was submitted, and students forget   */
+/* to tick a small checkbox. So when they come back to the tab after opening a  */
+/* form, ask once — the answer is the progress tracking.                        */
+/* -------------------------------------------------------------------------- */
+
+function syncDockOffset() {
+  const height = el.checkin.hidden ? 0 : el.checkin.offsetHeight + 12;
+  document.documentElement.style.setProperty('--dock-offset', `${height}px`);
+}
+
+function showCheckin(exam) {
+  const n = String(exam.n);
+  if (!el.checkin.hidden && el.checkin.dataset.n === n) return;
+  el.checkin.dataset.n = n;
+  el.checkinNumber.textContent = arabicNumber(exam.n);
+  el.checkinMeta.textContent = exam.t;
+  el.checkin.hidden = false;
+  el.checkinLive.textContent = `هل أنهيت النموذج ${arabicNumber(exam.n)}، ${exam.t}؟`;
+  syncDockOffset();
+}
+
+function hideCheckin() {
+  if (el.checkin.hidden) return;
+  el.checkin.hidden = true;
+  delete el.checkin.dataset.n;
+  el.checkinLive.textContent = '';
+  syncDockOffset();
+}
+
+function maybeCheckIn() {
+  if (!state.data || document.visibilityState !== 'visible') return;
+
+  const pending = store.pending;
+  if (!pending) {
+    hideCheckin();
+    return;
+  }
+
+  const exam = state.byNumber.get(pending.n);
+  const age = Date.now() - pending.at;
+  if (!exam || store.isDone(pending.n) || age > CHECKIN_MAX_AGE_MS) {
+    store.clearPending();
+    hideCheckin();
+    return;
+  }
+  if (age < CHECKIN_MIN_AWAY_MS) return; // too soon; ask on a later return
+
+  showCheckin(exam);
+}
+
+function answerCheckin(finished) {
+  const n = Number(el.checkin.dataset.n);
+  const hadFocus = el.checkin.contains(document.activeElement);
+  if (!n) {
+    hideCheckin();
+    return;
+  }
+
+  if (!finished) {
+    store.clearPending();
+    hideCheckin();
+    if (hadFocus) el.tileResume.focus({ preventScroll: true });
+    return;
+  }
+
+  setDone(n, true, { announce: false });
+  const { exam: next } = resumeTarget();
+  const message = `سُجِّل النموذج ${arabicNumber(n)} كمُنجز`;
+  if (!next) {
+    toast(`${message} — أنجزت جميع النماذج`, { duration: 5000 });
+    return;
+  }
+
+  const action = toast(message, {
+    duration: 9000,
+    action: {
+      label: `التالي: النموذج ${arabicNumber(next.n)}`,
+      href: examUrl(next),
+      onClick: () => examOpened(next.n),
+    },
+  });
+  if (hadFocus) action?.focus({ preventScroll: true });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Deep links                                                                  */
+/* -------------------------------------------------------------------------- */
 
 function flashCard(n) {
   const target = document.getElementById(`exam-${n}`);
@@ -635,6 +999,7 @@ function flashCard(n) {
 
 /** Reveal a specific form number, loading more batches if it is further down. */
 function revealExam(n) {
+  if (!state.byNumber.has(n)) return false;
   const index = state.results.findIndex((e) => e.n === n);
   if (index === -1) {
     // It is filtered out — clear filters so the user still lands on it.
@@ -660,6 +1025,7 @@ function revealExam(n) {
 let lastFocused = null;
 
 function openSheet() {
+  hideToast(); // it would sit over the sheet's own buttons
   el.sheetBody.append(el.controls);
   el.sheet.hidden = false;
   document.body.style.overflow = 'hidden';
@@ -705,6 +1071,14 @@ function sheetKeydown(event) {
 /* Wiring                                                                       */
 /* -------------------------------------------------------------------------- */
 
+/** Treat a middle-click like a click: it opens the form just the same. */
+function onOpenLink(node, handler) {
+  node.addEventListener('click', handler);
+  node.addEventListener('auxclick', (event) => {
+    if (event.button === 1) handler(event);
+  });
+}
+
 function bindEvents() {
   el.searchForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -738,28 +1112,49 @@ function bindEvents() {
   });
 
   el.statusGroup.addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-status]');
-    if (!btn) return;
-    state.status = btn.dataset.status;
+    const button = event.target.closest('[data-status]');
+    if (!button || button.dataset.status === state.status) return;
+    state.status = button.dataset.status;
     applyChange();
+    if (el.sheet.hidden) keepResultsInView();
   });
 
   el.sortSelect.addEventListener('change', () => {
     state.sort = el.sortSelect.value;
     applyChange();
+    if (el.sheet.hidden) keepResultsInView();
+  });
+
+  // One delegated listener for every card, however many batches are loaded.
+  el.grid.addEventListener('click', (event) => {
+    const node = event.target.closest('.card');
+    const exam = node && state.byNumber.get(Number(node.dataset.n));
+    if (!exam) return;
+
+    if (event.target.closest('.card__toggle')) setDone(exam.n, !store.isDone(exam.n));
+    else if (event.target.closest('.card__fav')) toggleFav(exam.n);
+    else if (event.target.closest('.card__copy')) copyExamLink(exam);
+    else if (event.target.closest('a.card__cta')) examOpened(exam.n);
+  });
+
+  el.grid.addEventListener('auxclick', (event) => {
+    if (event.button !== 1) return;
+    const cta = event.target.closest('a.card__cta');
+    const n = Number(cta?.closest('.card')?.dataset.n);
+    if (n) examOpened(n);
   });
 
   el.resetAll.addEventListener('click', resetAll);
-  el.resetProxies.forEach((btn) => btn.addEventListener('click', resetAll));
+  el.resetProxies.forEach((button) => button.addEventListener('click', resetAll));
   el.sheetReset.addEventListener('click', () => {
     resetAll();
     closeSheet();
   });
 
   el.loadMoreBtn.addEventListener('click', () => {
+    const firstNew = state.shown;
     appendBatch();
-    const cards = $$('.card', el.grid);
-    cards[Math.max(0, state.shown - PAGE_SIZE)]?.focus?.();
+    $$('.card', el.grid)[firstNew]?.querySelector('.card__cta')?.focus();
   });
 
   el.sheetOpen.addEventListener('click', openSheet);
@@ -767,15 +1162,23 @@ function bindEvents() {
   el.sheetApply.addEventListener('click', closeSheet);
   $('.sheet__backdrop', el.sheet).addEventListener('click', closeSheet);
 
-  el.tileResume.addEventListener('click', () => {
+  onOpenLink(el.tileResume, () => {
     const n = Number(el.tileResume.dataset.target);
-    if (n) revealExam(n);
+    if (n) examOpened(n);
+  });
+
+  onOpenLink(el.tileRandom, () => {
+    const exam = state.byNumber.get(Number(el.tileRandom.dataset.target));
+    if (!exam) return;
+    examOpened(exam.n);
+    toast(`فُتح النموذج ${arabicNumber(exam.n)}: ${exam.t}`);
   });
 
   el.tileTodo.addEventListener('click', () => {
     state.status = 'todo';
     state.q = '';
     el.search.value = '';
+    el.clear.hidden = true;
     applyChange({ scroll: true });
   });
 
@@ -783,27 +1186,50 @@ function bindEvents() {
     state.status = 'fav';
     state.q = '';
     el.search.value = '';
+    el.clear.hidden = true;
     applyChange({ scroll: true });
   });
 
-  el.tileRandom.addEventListener('click', () => {
-    const pool = state.results.length ? state.results : state.data?.exams ?? [];
-    if (!pool.length) return;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    const url = examUrl(pick);
-    if (!url || !isSafeUrl(url)) return;
-    store.markOpened(pick.n);
-    refreshQuickAccess();
-    window.open(url, '_blank', 'noopener,noreferrer');
-    toast(`فُتح النموذج ${arabicNumber(pick.n)}: ${pick.t}`);
+  // Reset is immediate and undoable — a confirmation dialog protects nothing
+  // that an undo does not protect better.
+  el.progressReset.addEventListener('click', () => {
+    const snapshot = store.snapshot();
+    store.resetProgress();
+    hideCheckin();
+    repaintCards();
+    refreshProgress();
+    const undo = toast('مُسح سجل الإنجاز، والمفضلة كما هي', {
+      duration: 8000,
+      action: {
+        label: 'تراجع',
+        onClick: () => {
+          store.restore(snapshot);
+          repaintCards();
+          refreshProgress();
+          toast('استُعيد سجل الإنجاز');
+        },
+      },
+    });
+    // The reset button disappears with the progress it reset; keep the
+    // keyboard focus somewhere useful instead of dropping it on <body>.
+    undo?.focus({ preventScroll: true });
   });
 
-  el.progressReset.addEventListener('click', () => {
-    if (!window.confirm('سيُحذف سجل تقدّمك المحفوظ على هذا الجهاز. هل تريد المتابعة؟')) return;
-    store.clear();
-    refreshQuickAccess();
-    applyChange();
-    toast('أُعيد ضبط سجل التقدّم');
+  el.checkinYes.addEventListener('click', () => answerCheckin(true));
+  el.checkinNo.addEventListener('click', () => answerCheckin(false));
+  el.checkin.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') answerCheckin(false);
+  });
+
+  el.toast.addEventListener('mouseenter', () => clearTimeout(toastHandle));
+  el.toast.addEventListener('mouseleave', () => {
+    if (el.toast.classList.contains('toast--visible')) scheduleToastHide(2500);
+  });
+  el.toast.addEventListener('focusin', () => clearTimeout(toastHandle));
+  el.toast.addEventListener('focusout', (event) => {
+    if (!el.toast.contains(event.relatedTarget) && el.toast.classList.contains('toast--visible')) {
+      scheduleToastHide(2500);
+    }
   });
 
   // "/" focuses search from anywhere; Escape clears it.
@@ -830,6 +1256,32 @@ function bindEvents() {
     render();
   });
 
+  // Coming back to the tab: refresh relative times, then ask about the form.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    repaintCards();
+    refreshProgress();
+    maybeCheckIn();
+  });
+  window.addEventListener('focus', maybeCheckIn);
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    // Restored from the back/forward cache: storage events were missed.
+    store.reload();
+    repaintCards();
+    refreshProgress();
+    maybeCheckIn();
+  });
+
+  // Another tab of the portal changed progress.
+  store.subscribe(() => {
+    repaintCards();
+    refreshProgress();
+    maybeCheckIn();
+  });
+
+  if ('ResizeObserver' in window) new ResizeObserver(syncDockOffset).observe(el.checkin);
+
   // Infinite scroll, with the button as the accessible fallback.
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver(
@@ -841,8 +1293,8 @@ function bindEvents() {
     observer.observe(el.sentinel);
   }
 
-  // Keep the controls in the right container when the viewport crosses 768px.
-  const mq = window.matchMedia('(min-width: 768px)');
+  // Keep the controls in the right container when the viewport crosses 900px.
+  const mq = window.matchMedia('(min-width: 900px)');
   const syncControlsHome = () => {
     if (mq.matches && !el.sheet.hidden) closeSheet();
     if (mq.matches && el.controls.parentElement !== el.controlsHome) {
@@ -952,7 +1404,7 @@ async function boot() {
 
     // Drop anything that cannot produce a safe link before it reaches the UI.
     data.exams = data.exams.filter((e) => {
-      const url = examUrl(e);
+      const url = e && examUrl(e);
       return Boolean(e && Number.isInteger(e.n) && e.t && url && isSafeUrl(url));
     });
     if (!data.exams.length) throw new Error('no usable records');
@@ -961,6 +1413,9 @@ async function boot() {
     data.meta.total = data.exams.length;
 
     state.data = data;
+    state.ordered = data.exams.slice().sort((a, b) => a.n - b.n);
+    state.byNumber = new Map(state.ordered.map((e) => [e.n, e]));
+
     renderMeta(data.meta);
     bindEvents();
     readStateFromUrl();
@@ -969,6 +1424,7 @@ async function boot() {
     refreshQuickAccess();
     compute();
     render();
+    maybeCheckIn();
 
     // Deep link: #exam-47 scrolls to and highlights that form.
     const hash = /^#exam-(\d+)$/.exec(location.hash);

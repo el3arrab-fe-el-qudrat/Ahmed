@@ -36,7 +36,7 @@
 .btn--primary {
   background: var(--accent);
   color: var(--accent-ink);
-  box-shadow: var(--shadow-1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-accent);
 }
 
 .btn--primary:hover {
@@ -45,6 +45,25 @@
 
 .btn--primary:active {
   background: var(--accent-active);
+}
+
+/* Tinted: the same burgundy action, at rest a wash rather than a solid block.
+   Used where the action repeats many times on one screen (every exam card). */
+.btn--tint {
+  background: var(--accent-soft);
+  color: var(--accent-tint-ink);
+}
+
+.btn--tint:hover,
+.btn--tint:focus-visible {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-accent);
+}
+
+.btn--tint:active {
+  background: var(--accent-active);
+  color: var(--accent-ink);
 }
 
 .btn--secondary {
@@ -152,11 +171,20 @@
   border-radius: var(--r-md);
 }
 
+/* The mark is a white disc (see --seal-*): a hairline gold ring and a soft
+   tinted shadow lift it off the translucent header in either theme. */
 .brand__mark {
-  width: 38px;
-  height: 38px;
-  object-fit: contain;
+  width: 48px;
+  height: 48px;
   flex: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--seal-line), 0 6px 14px -8px rgba(24, 34, 52, 0.45);
+  transition: transform var(--dur-slow) var(--ease);
+}
+
+.brand:hover .brand__mark {
+  transform: rotate(-6deg) scale(1.04);
 }
 
 .brand__text {
@@ -225,6 +253,11 @@
     display: none;
   }
 
+  .brand__mark {
+    width: 42px;
+    height: 42px;
+  }
+
   .nav {
     position: absolute;
     inset-block-start: calc(var(--header-h) - 2px);
@@ -267,20 +300,47 @@
 
 /* --------------------------------------------------------------------------
    Hero
+   Phones: the seal sits above a centred column. From 900px the hero splits —
+   copy and search on the reading side (right), the seal on the left.
    -------------------------------------------------------------------------- */
 
 .hero {
   position: relative;
+  isolation: isolate;
   background-image: var(--hero-wash);
   border-block-end: 1px solid var(--border);
   overflow: hidden;
 }
 
+/* A faint dot grid, faded out towards the reading side so it never sits
+   behind body copy. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(var(--dots) 1.1px, transparent 1.4px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(65% 85% at 18% 45%, #000, transparent 72%);
+  mask-image: radial-gradient(65% 85% at 18% 45%, #000, transparent 72%);
+  pointer-events: none;
+}
+
 .hero__inner {
-  padding-block: clamp(var(--sp-8), 5vw, var(--sp-12));
-  max-width: 760px;
-  margin-inline: auto;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-6);
+  /* The bottom padding leaves room for the quick-access tiles, which overlap
+     the hero's lower edge. */
+  padding-block: clamp(var(--sp-6), 4vw, var(--sp-10))
+    calc(clamp(var(--sp-8), 5vw, var(--sp-12)) + var(--sp-8));
   text-align: center;
+}
+
+.hero__copy {
+  width: 100%;
+  max-width: 640px;
+  min-width: 0;
 }
 
 .eyebrow {
@@ -304,25 +364,182 @@
   height: 6px;
   border-radius: 50%;
   background: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
   flex: none;
 }
 
 .hero__title {
-  margin-block-end: var(--sp-3);
+  margin-block-end: var(--sp-4);
+  font-size: var(--fs-hero);
+  line-height: 1.22;
+  letter-spacing: -0.015em;
 }
 
+/* A gold marker stroke behind the key phrase rather than an underline, which
+   would collide with Arabic descenders. */
 .hero__title em {
   font-style: normal;
   color: var(--accent);
+  background-image: linear-gradient(var(--highlight), var(--highlight));
+  background-repeat: no-repeat;
+  background-size: 100% 0.3em;
+  background-position: 0 86%;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding-inline: 0.06em;
+}
+
+:root[data-theme="dark"] .hero__title em {
+  color: #f0a7af;
 }
 
 .hero__lead {
-  max-width: 56ch;
+  max-width: 52ch;
+  text-wrap: balance;
   margin-inline: auto;
   margin-block-end: var(--sp-6);
   font-size: var(--fs-lg);
   line-height: var(--lh-snug);
   color: var(--ink-2);
+}
+
+/* ---- Seal (the logo) ------------------------------------------------------- */
+
+.hero__brand {
+  position: relative;
+  order: -1;
+  margin: 0;
+  padding-block-end: var(--sp-4);
+}
+
+.seal {
+  position: relative;
+  width: 116px;
+  aspect-ratio: 1;
+  max-width: 100%;
+  padding: 5px;
+  border-radius: 50%;
+  background: var(--seal-rim);
+  box-shadow: var(--seal-shadow);
+}
+
+.seal__img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--seal-line);
+}
+
+/* Orbit rings: one dashed and slowly turning, one solid hairline. Purely
+   decorative, and frozen by the reduced-motion rule in base.css. */
+.seal::before,
+.seal::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.seal::before {
+  inset: -12px;
+  border: 1.5px dashed var(--seal-line);
+  animation: orbit 90s linear infinite;
+}
+
+.seal::after {
+  inset: -24px;
+  border: 1px solid var(--seal-line);
+  opacity: 0.45;
+}
+
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.seal__caption {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 50%;
+  translate: 50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  box-shadow: var(--shadow-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.seal__caption span {
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+@media (min-width: 560px) and (max-width: 899px) {
+  .seal {
+    width: 148px;
+    padding: 7px;
+  }
+
+  .seal::before {
+    inset: -16px;
+  }
+
+  .seal::after {
+    inset: -32px;
+  }
+}
+
+@media (min-width: 900px) {
+  .hero__inner {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: center;
+    justify-items: stretch;
+    gap: clamp(var(--sp-8), 5vw, var(--sp-16));
+    padding-block: clamp(var(--sp-10), 5vw, var(--sp-16))
+      calc(clamp(var(--sp-10), 5vw, var(--sp-16)) + var(--sp-8));
+    text-align: start;
+  }
+
+  .hero__copy {
+    max-width: none;
+  }
+
+  .hero__lead {
+    margin-inline: 0;
+  }
+
+  .hero__brand {
+    order: 0;
+    justify-self: center;
+    padding-block-end: var(--sp-6);
+  }
+
+  .seal {
+    width: clamp(260px, 25vw, 330px);
+    padding: 10px;
+  }
+
+  .seal::before {
+    inset: -22px;
+  }
+
+  .seal::after {
+    inset: -44px;
+  }
+
+  .seal__caption {
+    padding: var(--sp-2) var(--sp-4);
+    font-size: var(--fs-sm);
+  }
 }
 
 /* ---- Search --------------------------------------------------------------- */
@@ -332,31 +549,31 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-2);
+  padding: 6px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3), var(--shadow-1);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .search:focus-within {
   border-color: var(--focus);
-  box-shadow: var(--shadow-2), 0 0 0 4px var(--focus-halo);
+  box-shadow: var(--shadow-3), 0 0 0 4px var(--focus-halo);
 }
 
 .search__icon {
   flex: none;
   width: 20px;
   height: 20px;
-  margin-inline-start: var(--sp-2);
+  margin-inline-start: var(--sp-3);
   color: var(--ink-3);
 }
 
 .search__input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 40px;
+  height: 46px;
   border: 0;
   background: transparent;
   font-size: var(--fs-lg);
@@ -379,6 +596,9 @@
 
 .search__submit {
   flex: none;
+  min-height: 46px;
+  padding-inline: var(--sp-5);
+  border-radius: 12px;
 }
 
 .hero__hint {
@@ -405,34 +625,61 @@ kbd {
 /* ---- Hero stats ----------------------------------------------------------- */
 
 .hero__stats {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
   justify-content: center;
-  gap: var(--sp-2) var(--sp-6);
   margin-block-start: var(--sp-6);
 }
 
 .hero__stats li {
   display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  font-size: var(--fs-sm);
+  flex-direction: column;
+  gap: 2px;
+  padding-inline: clamp(var(--sp-3), 3vw, var(--sp-6));
+  font-size: var(--fs-xs);
+  line-height: 1.4;
   color: var(--ink-3);
 }
 
+.hero__stats li + li {
+  border-inline-start: 1px solid var(--border-strong);
+}
+
 .hero__stats b {
-  font-size: var(--fs-xl);
+  font-size: var(--fs-2xl);
   font-weight: 700;
+  line-height: 1.2;
   color: var(--ink);
   letter-spacing: -0.02em;
+}
+
+/* The date is a phrase, not a figure — keep it from dwarfing the counts. */
+.hero__stats li:last-child b {
+  font-size: var(--fs-lg);
+  line-height: 1.75;
+}
+
+@media (min-width: 900px) {
+  .hero__stats {
+    justify-content: start;
+    margin-block-start: var(--sp-8);
+  }
+
+  .hero__stats li:first-child {
+    padding-inline-start: 0;
+  }
 }
 
 /* --------------------------------------------------------------------------
    Quick access
    -------------------------------------------------------------------------- */
 
+/* Pulled up over the hero's bottom edge so the tiles read as the first
+   thing to do after searching, not as a separate band. */
 .quick {
-  padding-block: var(--sp-6);
+  position: relative;
+  z-index: 2;
+  margin-block-start: calc(-1 * var(--sp-10));
 }
 
 .quick__grid {
@@ -453,11 +700,11 @@ kbd {
   align-items: center;
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
-  min-height: 68px;
+  min-height: 76px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-2);
   text-align: start;
   text-decoration: none;
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
@@ -466,24 +713,47 @@ kbd {
 
 .tile:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-2);
-  transform: translateY(-1px);
+  box-shadow: var(--shadow-3);
+  transform: translateY(-2px);
+}
+
+.tile:active {
+  transform: translateY(0);
 }
 
 .tile__icon {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   flex: none;
-  border-radius: var(--r-md);
+  border-radius: 12px;
   background: var(--surface-sunken);
   color: var(--ink-2);
 }
 
+/* "Resume" is the one tile that knows where you are — it gets the strong
+   navy surface. */
+.tile--accent {
+  background: var(--strong-bg);
+  border-color: transparent;
+}
+
+.tile--accent:hover {
+  border-color: transparent;
+}
+
+.tile--accent .tile__label {
+  color: var(--strong-ink);
+}
+
+.tile--accent .tile__meta {
+  color: var(--strong-ink-2);
+}
+
 .tile--accent .tile__icon {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--strong-icon-bg);
+  color: var(--strong-icon);
 }
 
 .tile--gold .tile__icon {
@@ -493,6 +763,30 @@ kbd {
 
 .tile__body {
   min-width: 0;
+}
+
+/* Resume and random open a form in a new tab; say so before the click. */
+.tile__go {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-inline-start: auto;
+  color: var(--ink-3);
+  opacity: 0.7;
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.tile:hover .tile__go {
+  opacity: 1;
+}
+
+.tile--accent .tile__go {
+  color: var(--strong-ink-2);
+}
+
+/* A link tile has no href until the data has loaded. */
+a.tile:not([href]) {
+  pointer-events: none;
 }
 
 .tile__label {
@@ -556,6 +850,15 @@ kbd {
   color: var(--ink-2);
 }
 
+.progress__pct {
+  flex: none;
+  min-width: 3.5ch;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--gold-ink);
+  text-align: center;
+}
+
 .progress__reset {
   flex: none;
 }
@@ -586,7 +889,18 @@ kbd {
 }
 
 .toolbar__heading h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-size: var(--fs-xl);
+}
+
+.toolbar__heading h2::before {
+  content: "";
+  width: 4px;
+  height: 0.95em;
+  border-radius: 2px;
+  background: linear-gradient(var(--gold), var(--accent));
 }
 
 .result-count {
@@ -659,6 +973,10 @@ kbd {
 }
 
 .segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 32px;
   padding: 0 var(--sp-3);
   border-radius: 7px;
@@ -679,6 +997,25 @@ kbd {
   color: var(--ink);
   font-weight: 600;
   box-shadow: var(--shadow-1);
+}
+
+/* Reserved width (three digits) so filling the counts never shifts the bar. */
+.segmented__count {
+  display: inline-block;
+  min-width: 2.6em;
+  padding: 0 0.45em;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.segmented button[aria-pressed="true"] .segmented__count {
+  background: var(--surface-sunken);
+  color: var(--ink);
 }
 
 /* ---- Range chips ----------------------------------------------------------- */
@@ -721,14 +1058,6 @@ kbd {
   background: var(--gold);
   border-color: var(--gold);
   color: var(--navy-900);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .chip[aria-pressed="true"] {
-    background: var(--gold);
-    border-color: var(--gold);
-    color: var(--navy-900);
-  }
 }
 
 .chip__count {
@@ -803,7 +1132,7 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  padding: var(--sp-4);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -822,6 +1151,24 @@ kbd {
   border-color: var(--border-strong);
 }
 
+/* A gold edge on the reading side: grows in on hover, stays on once done. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--sp-4);
+  inset-inline-start: -1px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--gold);
+  transform: scaleY(0);
+  transition: transform var(--dur-slow) var(--ease);
+}
+
+.card:hover::before,
+.card--done::before {
+  transform: scaleY(1);
+}
+
 .card--done {
   border-color: color-mix(in srgb, var(--gold) 42%, var(--border));
   background: linear-gradient(var(--gold-soft), var(--gold-soft)) padding-box, var(--surface);
@@ -836,25 +1183,19 @@ kbd {
 .card__number {
   display: inline-flex;
   align-items: baseline;
-  gap: 3px;
-  padding: 3px var(--sp-2);
-  background: var(--surface-sunken);
-  border-radius: var(--r-sm);
+  gap: 5px;
   font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--ink-3);
 }
 
 .card__number b {
-  font-size: var(--fs-md);
+  font-size: var(--fs-xl);
+  line-height: 1.2;
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
-}
-
-.card--done .card__number {
-  background: color-mix(in srgb, var(--gold) 20%, transparent);
 }
 
 .card--done .card__number b {
@@ -908,7 +1249,7 @@ kbd {
   align-items: center;
   gap: var(--sp-2);
   padding-block-start: var(--sp-3);
-  border-block-start: 1px solid var(--border);
+  border-block-start: 1px dashed var(--border);
   /* Cards in a row stretch to a common height; keep the call to action pinned
      to the bottom edge so the button line stays level across the row. */
   margin-block-start: auto;
@@ -918,20 +1259,68 @@ kbd {
   flex: 1 1 auto;
 }
 
-.card__toggle[aria-pressed="true"] {
+.card__status[hidden] {
+  display: none;
+}
+
+.card__status--done {
+  font-weight: 600;
   color: var(--gold-ink);
-  background: var(--gold-soft);
-  border-color: color-mix(in srgb, var(--gold) 38%, transparent);
+}
+
+/* "Done" reads as a task checkbox: an empty ring that fills with gold. The
+   ring uses --ink-3 so the control's edge keeps 3:1 against the card. */
+.card__check {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--ink-3);
+  border-radius: 50%;
+  color: transparent;
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.card__check .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.6;
+}
+
+.card__toggle:hover .card__check {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.card__toggle[aria-pressed="true"] .card__check {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--ink-inverse);
+}
+
+.card__toggle:active .card__check {
+  transform: scale(0.9);
+}
+
+/* Like the done check, a saved favourite is shown by the glyph filling in —
+   no extra box — so the two toggles read as a pair. */
+.card__fav .icon {
+  width: 20px;
+  height: 20px;
+  transition: transform var(--dur) var(--ease);
 }
 
 .card__fav[aria-pressed="true"] {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent-tint-ink);
 }
 
 .card__fav[aria-pressed="true"] .icon {
   fill: currentColor;
+}
+
+.card__fav:active .icon {
+  transform: scale(0.85);
 }
 
 /* The "resume here" highlight after the user jumps to a form. */
@@ -1185,7 +1574,7 @@ kbd {
   min-height: 42px;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 899px) {
   .filter-trigger {
     display: inline-flex;
   }
@@ -1224,7 +1613,8 @@ kbd {
 
 .toast {
   position: fixed;
-  inset-block-end: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  /* --dock-offset lifts the toast above the check-in panel when both show. */
+  inset-block-end: calc(var(--sp-5) + env(safe-area-inset-bottom) + var(--dock-offset, 0px));
   inset-inline: 0;
   z-index: 150;
   display: flex;
@@ -1235,9 +1625,10 @@ kbd {
 .toast__inner {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: var(--sp-3);
   max-width: calc(100vw - 2 * var(--gutter));
-  padding: var(--sp-3) var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  min-height: 46px;
   background: var(--navy-700);
   color: #fff;
   border-radius: var(--r-full);
@@ -1252,6 +1643,125 @@ kbd {
 .toast--visible .toast__inner {
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
+}
+
+.toast__text {
+  margin: 0;
+}
+
+.toast__actions {
+  display: inline-flex;
+  flex: none;
+  margin-inline-end: calc(-1 * var(--sp-2));
+}
+
+.toast__actions[hidden] {
+  display: none;
+}
+
+.toast__action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur) var(--ease);
+}
+
+.toast__action:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.toast__action:focus-visible {
+  outline: 2px solid var(--gold-400);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Check-in: "did you finish this form?"
+   -------------------------------------------------------------------------- */
+
+.checkin {
+  position: fixed;
+  inset-inline: var(--gutter);
+  inset-block-end: calc(var(--sp-4) + env(safe-area-inset-bottom));
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: 580px;
+  margin-inline: auto;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-3), 0 2px 6px rgba(24, 34, 52, 0.08);
+  animation: slide-up var(--dur-slow) var(--ease);
+}
+
+.checkin[hidden] {
+  display: none;
+}
+
+.checkin__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--gold-soft);
+  color: var(--gold-ink);
+}
+
+.checkin__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.checkin__title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.checkin__meta {
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkin__actions {
+  display: flex;
+  flex: none;
+  gap: var(--sp-2);
+}
+
+@media (max-width: 519px) {
+  .checkin {
+    flex-wrap: wrap;
+    padding: var(--sp-3);
+  }
+
+  .checkin__actions {
+    width: 100%;
+  }
+
+  .checkin__actions .btn {
+    flex: 1 1 0;
+    min-height: 42px;
+  }
 }
 
 :root[data-theme="dark"] .toast__inner {
@@ -1398,9 +1908,11 @@ kbd {
 }
 
 .footer__brand img {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--seal-line), var(--shadow-2);
 }
 
 .footer__name {
@@ -1511,6 +2023,10 @@ kbd {
   height: 1px;
 }
 
+#exams {
+  padding-block-start: var(--sp-8);
+}
+
 /* --------------------------------------------------------------------------
    Progressive enhancement: the skeletons are only meaningful while JS boots.
    -------------------------------------------------------------------------- */
@@ -1529,6 +2045,12 @@ kbd {
   justify-content: center;
   align-items: center;
   gap: var(--sp-2);
+}
+
+@media (min-width: 900px) {
+  .hero__hint {
+    justify-content: flex-start;
+  }
 }
 
 /* Results update as you type, so on a phone the submit button collapses to its
@@ -1586,6 +2108,10 @@ kbd {
   .quick__grid > .tile:not(:first-child) .tile__icon {
     width: 32px;
     height: 32px;
+  }
+
+  .quick__grid > .tile:not(:first-child) .tile__go {
+    display: none;
   }
 
   .quick__grid > .tile:not(:first-child) .tile__label {

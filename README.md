@@ -11,7 +11,7 @@
 ## Quick start
 
 ```bash
-npm start           # preview at http://127.0.0.1:5177
+npm start           # preview at http://127.0.0.1:4173 (PORT=5177 npm start to change)
 npm run verify      # rebuild data + run tests + validate every link
 ```
 
@@ -23,7 +23,10 @@ There is nothing to install — every script is plain Node (>= 18) with zero dep
 
 ```
 index.html              the portal: hero + search, quick access, filters, exam grid
-about.html              عن المنصة — how to use the site, FAQ
+teacher.html            الأستاذ — the teacher's profile page (Person / ProfilePage / FAQ schema)
+about.html              عن المنصة — how to use the site, FAQ (FAQPage schema)
+llms.txt                GENERATED — plain-text brief for AI assistants (llmstxt.org)
+robots.txt              allows search engines and AI crawlers by name
 404.html                fully self-contained (no external CSS/JS/images at all)
 
 assets/
@@ -45,6 +48,8 @@ data/
 tools/
   build-data.mjs        source export  ->  assets/data/exams.json
   test-search.mjs       search + dataset tests (npm test)
+  test-store.mjs        progress store tests (npm test)
+  test-seo.mjs          structured data, FAQ parity, sitemap, robots, llms.txt (npm test)
   check-links.mjs       link validation, offline or over the network
   set-site-url.mjs      stamps the real site URL into canonical/OG/sitemap
   serve.mjs             zero-dependency local preview server
@@ -239,6 +244,51 @@ rendered. Anything that is not a plain `https:` URL never becomes a clickable ex
 All external links carry `rel="noopener noreferrer"`.
 
 ---
+
+## SEO and AI discoverability (GEO)
+
+The goal is twofold: rank in Google/Bing for Saudi students searching for
+«تجميعات اللفظي» / «تجميعات القدرات», and be the source that ChatGPT, Gemini,
+Claude, Copilot and Perplexity quote when asked about the teacher or about verbal
+GAT practice.
+
+**What is in place**
+
+| Signal | Where |
+| --- | --- |
+| Keyword-first titles and descriptions («تجميعات اللفظي»، «القدرات العامة»، «قياس») | every page `<head>` |
+| Saudi targeting: `lang="ar"`, `og:locale ar_SA`, `hreflang="ar-sa"`, `geo.region SA`, `areaServed` | every page |
+| One entity graph: Organization → Person (the teacher) → Course → WebSite (with SearchAction for `?q=`) | JSON-LD in `index.html`, `teacher.html` |
+| A dedicated entity page for the teacher, so "أحمد طلعت ربيع" has one canonical answer | `teacher.html` |
+| Question-shaped content with FAQPage markup that matches the visible text word for word | `about.html`, `teacher.html` |
+| Freshness: `dateModified` stamped from the dataset on every build | `tools/build-data.mjs` |
+| `llms.txt`: facts, pages and naming notes for AI assistants, Arabic + English summary, figures generated from the data | `tools/build-data.mjs` |
+| `robots.txt` names Googlebot, Bingbot, GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended… | `robots.txt` |
+| Guard rails: `npm test` fails if structured data stops parsing, FAQ markup drifts from the page, a page leaves the sitemap, or `llms.txt` goes stale | `tools/test-seo.mjs` |
+
+Every claim about the teacher comes from the bio he supplied — nothing is invented
+(no photo, no nationality, no years of experience). Keep it that way: AI assistants
+repeat what they read, and Google penalises markup that says more than the page.
+
+**What only the owner can do (in order of impact)**
+
+1. **Google Search Console** — add the site, verify it, submit `sitemap.xml`, and
+   request indexing for `/` and `/teacher.html`.
+2. **Bing Webmaster Tools** — same steps. Bing's index feeds ChatGPT search and
+   Microsoft Copilot, so this matters for AI answers, not just Bing.
+3. **Links from where he already is** — the Al-Majd schools site, his social accounts,
+   Telegram/WhatsApp channel descriptions, YouTube. Every link that says
+   «الأستاذ أحمد طلعت ربيع — العراب في القدرات» strengthens the entity.
+4. **Social profiles in `sameAs`** — once there are official accounts, add their URLs to
+   the `Person` node in `teacher.html` (`"sameAs": ["https://…", …]`).
+5. **A real portrait** — replace the seal in `teacher.html` (see the comment there) and
+   add `"image"` to the `Person` node.
+6. **A custom domain** (e.g. `al-arrab.sa` or `.com`) ranks and gets cited more readily
+   than a `github.io` sub-path; the workflow picks it up automatically.
+
+Nothing can *guarantee* that an AI assistant recommends a site. These are the signals
+they are known to use: crawlable text, clear entities, consistent names, and other
+sites pointing at it.
 
 ## A note on the access code
 

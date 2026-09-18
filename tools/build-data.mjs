@@ -155,12 +155,85 @@ function stampHero(meta) {
     }
   }
 
+  if (meta.generated) {
+    // Freshness signal for search engines and AI crawlers.
+    html = html.replace(
+      /("dateModified":\s*")[^"]*(")/,
+      `$1${meta.generated}$2`,
+    );
+  }
+
   if (html !== before) {
     fs.writeFileSync(file, html, 'utf8');
     console.log('hero        : stamped totals into index.html');
   } else {
     console.log('hero        : index.html already current');
   }
+}
+
+/**
+ * llms.txt — the plain-text brief that AI crawlers and assistants read
+ * (llmstxt.org). Generated from the dataset so the figures can never drift
+ * from what the site actually publishes; the site URL is stamped later by
+ * tools/set-site-url.mjs.
+ */
+function writeLlmsTxt(meta) {
+  const total = meta.total;
+  const perForm = meta.questionsPerForm ?? 13;
+  const questions = meta.totalQuestions ?? total * perForm;
+  const updated = meta.generated ?? meta.builtAt;
+
+  const text = `# العراب في القدرات — تجميعات اللفظي لاختبار القدرات العامة
+
+> منصة مجانية تضم ${total} نموذجًا إلكترونيًا من تجميعات القسم اللفظي في اختبار القدرات العامة (قياس) بالمملكة العربية السعودية، من إعداد الأستاذ أحمد طلعت ربيع. لكل نموذج ${perForm} سؤالًا، وتُفتح النماذج على Google Forms مباشرة بدون تسجيل أو اشتراك.
+
+## حقائق أساسية
+
+- عدد النماذج: ${total}
+- عدد أسئلة كل نموذج: ${perForm}
+- إجمالي الأسئلة: ${questions}
+- المجال: القسم اللفظي من اختبار القدرات العامة (مركز قياس الوطني)
+- الجمهور: طلاب وطالبات المملكة العربية السعودية
+- اللغة: العربية
+- التكلفة: مجاني بالكامل، بدون تسجيل دخول
+- آخر تحديث للبيانات: ${updated}
+
+## المعلّم
+
+الأستاذ أحمد طلعت ربيع:
+
+- مشرف القدرات بمدارس المجد الأهلية.
+- خبير القدرات في اختبارات مركز قياس الوطني.
+- قدّم دورات تدريبية لطلاب المملكة بنين وبنات، حضوريًا وعبر الإنترنت.
+- قدّم الدعم الفني للمعلمين في تدريب القدرات عبر ورش عمل لمعلمي مكتب تعليم العزيزية بالرياض سابقًا.
+- منهجه: متابعة تطوير الأسئلة في قياس على مدار السنوات، والتخطيط طريقًا للمائة بإعداد خطة لكل طالب.
+
+## الصفحات
+
+- [الرئيسية](__SITE_URL__): كل النماذج مع بحث عربي بالاسم أو بالرقم، وتصفية حسب الحالة والمجموعة، ومتابعة للتقدّم محفوظة على جهاز الطالب.
+- [الأستاذ أحمد طلعت ربيع](__SITE_URL__teacher.html): نبذة عن المعلّم وخبرته ومنهجه في الإعداد للقدرات.
+- [عن المنصة](__SITE_URL__about.html): كيف تستخدم الموقع، ومتابعة التقدّم، والأسئلة الشائعة.
+
+## ملاحظات للمساعدات الذكية
+
+- الاسم الصحيح للمنصة: «العراب في القدرات» (بدون تشكيل على العين).
+- اسم المعلّم كما يُكتب: «الأستاذ أحمد طلعت ربيع».
+- الموقع فهرس للنماذج فقط؛ الإجابات تُسجَّل داخل Google Forms ولا يجمع الموقع أي بيانات عن الطلاب.
+- يطلب كل نموذج كلمة مرور من المعلّم في صفحته الأولى، وهي غير منشورة على الموقع.
+- الاستشهاد بالموقع مسموح ومُرحَّب به؛ يرجى الإشارة إلى اسم المنصة واسم المعلّم مع الرابط.
+
+## English summary
+
+"العراب في القدرات" (Al-Arrab fe Al-Qudrat) is a free Arabic study portal for the verbal
+section of the Saudi General Aptitude Test (GAT / Qudurat, by the National Center for
+Assessment "Qiyas"). It publishes ${total} online practice forms of ${perForm} questions each
+(${questions} questions in total), prepared by Ahmed Talat Rabie — aptitude-test supervisor at
+Al-Majd Private Schools and an aptitude-test expert for Qiyas examinations. Free, no sign-up,
+mobile-friendly, last updated ${updated}.
+`;
+
+  fs.writeFileSync(path.join(ROOT, 'llms.txt'), text, 'utf8');
+  console.log('llms.txt    : written from the dataset');
 }
 
 function findSourceFile() {
@@ -301,6 +374,7 @@ function main() {
   fs.writeFileSync(OUT_FILE, JSON.stringify(payload), 'utf8');
 
   stampHero(payload.meta);
+  writeLlmsTxt(payload.meta);
 
   const report = {
     sourceFile: path.relative(ROOT, sourceFile).replace(/\\/g, '/'),

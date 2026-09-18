@@ -9,9 +9,14 @@
       name="description"
       content="تعرَّف على منصة نماذج تجميعات اللفظي للأستاذ أحمد طلعت ربيع: كيف تبحث عن النموذج، كيف تتابع تقدّمك، وكيف تعمل النماذج."
     />
+    <meta name="author" content="أحمد طلعت ربيع" />
+    <meta name="geo.region" content="SA" />
+    <meta name="geo.placename" content="Saudi Arabia" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light" />
     <link rel="canonical" href="__SITE_URL__about.html" />
+    <link rel="alternate" hreflang="ar-sa" href="__SITE_URL__about.html" />
+    <link rel="alternate" hreflang="x-default" href="__SITE_URL__about.html" />
 
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="العراب في القدرات" />
@@ -52,6 +57,83 @@
       } catch (e) {}
     </script>
 
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": "__SITE_URL__about.html#webpage",
+            "url": "__SITE_URL__about.html",
+            "name": "عن المنصة — العراب في القدرات",
+            "inLanguage": "ar-SA",
+            "isPartOf": { "@id": "__SITE_URL__#website" },
+            "about": { "@id": "__SITE_URL__#organization" },
+            "breadcrumb": { "@id": "__SITE_URL__about.html#breadcrumb" }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "__SITE_URL__about.html#breadcrumb",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "الرئيسية", "item": "__SITE_URL__" },
+              { "@type": "ListItem", "position": 2, "name": "عن المنصة" }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "__SITE_URL__about.html#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "ما هي تجميعات اللفظي؟",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "«التجميعات» مصطلح يستخدمه طلاب القدرات للأسئلة المجمَّعة للتدرب على نمط اختبار القدرات العامة. وهذه المنصة تضم 301 نموذجًا من تجميعات القسم اللفظي من إعداد الأستاذ أحمد طلعت ربيع، لكل نموذج 13 سؤالًا."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "هل استخدام الموقع مجاني؟",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "نعم، جميع النماذج متاحة مجانًا ولا تحتاج إلى تسجيل دخول أو اشتراك."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "كم عدد الأسئلة في كل نموذج؟",
+                "acceptedAnswer": { "@type": "Answer", "text": "13 سؤالًا في كل نموذج." }
+              },
+              {
+                "@type": "Question",
+                "name": "هل تُحفظ إجاباتي هنا؟",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "لا. الإجابات تُسجَّل داخل نموذج Google Forms نفسه، وليس في هذا الموقع. المنصة مجرّد فهرس يوصلك إلى النموذج الصحيح."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "النموذج لا يفتح، ماذا أفعل؟",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "تأكّد أولًا من اتصالك بالإنترنت، ثم جرّب فتح الرابط في متصفّح آخر. يمكنك أيضًا نسخ رابط النموذج من زر النسخ الموجود على البطاقة ولصقه مباشرة في المتصفح."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "هل يعمل الموقع على الجوال؟",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "نعم، الموقع مصمَّم للجوال أولًا ويعمل على جميع أحجام الشاشات. يمكنك أيضًا إضافته إلى الشاشة الرئيسية ليفتح كتطبيق مستقل."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+
     <script>
       /* The absolute site URL is stamped in at deploy time by
          tools/set-site-url.mjs (the GitHub Actions workflow runs it with the
@@ -65,14 +147,15 @@
         var base = location.origin + location.pathname.replace(/[^/]*$/, '');
         var attrs = [
           ['link[rel="canonical"]', 'href'],
+          ['link[rel="alternate"]', 'href'],
           ['meta[property="og:url"]', 'content'],
           ['meta[property="og:image"]', 'content'],
         ];
         attrs.forEach(function (pair) {
-          var node = document.querySelector(pair[0]);
-          if (!node) return;
-          var value = node.getAttribute(pair[1]) || '';
-          if (value.indexOf(MARK) === 0) node.setAttribute(pair[1], base + value.slice(MARK.length));
+          document.querySelectorAll(pair[0]).forEach(function (node) {
+            var value = node.getAttribute(pair[1]) || '';
+            if (value.indexOf(MARK) === 0) node.setAttribute(pair[1], base + value.slice(MARK.length));
+          });
         });
         var ld = document.querySelector('script[type="application/ld+json"]');
         if (ld && ld.textContent.indexOf(MARK) !== -1) {
@@ -124,6 +207,7 @@
         <nav class="nav" id="primaryNav" aria-label="التنقل الرئيسي">
           <a href="./">الرئيسية</a>
           <a href="./#exams">النماذج</a>
+          <a href="teacher.html">الأستاذ</a>
           <a href="about.html" aria-current="page">عن المنصة</a>
         </nav>
 
@@ -169,8 +253,15 @@
           <h2>ما هذه المنصة؟</h2>
           <p>
             هذه صفحة واحدة تجمع كل نماذج <strong>تجميعات اللفظي</strong> الخاصة بالأستاذ
-            <strong>أحمد طلعت ربيع</strong> في مكان واحد، بدل البحث عنها في الرسائل والمجموعات.
-            الهدف بسيط: أن تصل إلى النموذج الذي تريده وتبدأ الاختبار في أقل عدد ممكن من النقرات.
+            <a href="teacher.html"><strong>أحمد طلعت ربيع</strong></a> — مشرف القدرات بمدارس المجد
+            الأهلية وخبير القدرات في اختبارات مركز قياس الوطني — في مكان واحد، بدل البحث عنها في
+            الرسائل والمجموعات. الهدف بسيط: أن تصل إلى النموذج الذي تريده وتبدأ الاختبار في أقل عدد
+            ممكن من النقرات.
+          </p>
+          <p>
+            المحتوى موجَّه لطلاب <strong>المملكة العربية السعودية</strong> المستعدين لاختبار القدرات
+            العامة: <span class="tnum">301</span> نموذجًا إلكترونيًا، لكل نموذج
+            <span class="tnum">13</span> سؤالًا، متاحة مجانًا بدون تسجيل.
           </p>
           <p>
             كل نموذج مستضاف على <span dir="ltr">Google Forms</span>، ويُفتح في تبويب جديد عند
@@ -237,6 +328,16 @@
 
           <h2>أسئلة شائعة</h2>
 
+          <h3>ما هي تجميعات اللفظي؟</h3>
+          <p>
+            «التجميعات» مصطلح يستخدمه طلاب القدرات للأسئلة المجمَّعة للتدرب على نمط اختبار القدرات
+            العامة. وهذه المنصة تضم <span class="tnum">301</span> نموذجًا من تجميعات القسم اللفظي
+            من إعداد الأستاذ أحمد طلعت ربيع، لكل نموذج <span class="tnum">13</span> سؤالًا.
+          </p>
+
+          <h3>هل استخدام الموقع مجاني؟</h3>
+          <p>نعم، جميع النماذج متاحة مجانًا ولا تحتاج إلى تسجيل دخول أو اشتراك.</p>
+
           <h3>كم عدد الأسئلة في كل نموذج؟</h3>
           <p><span class="tnum">13</span> سؤالًا في كل نموذج.</p>
 
@@ -286,6 +387,7 @@
         <nav class="footer__links" aria-label="روابط التذييل">
           <a href="./">الرئيسية</a>
           <a href="./#exams">النماذج</a>
+          <a href="teacher.html">الأستاذ</a>
           <a href="about.html">عن المنصة</a>
         </nav>
 

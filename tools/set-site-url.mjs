@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PLACEHOLDER = '__SITE_URL__';
 const MARKER_FILE = path.join(ROOT, 'data', '.site-url');
-const TARGETS = ['index.html', 'about.html', 'sitemap.xml'];
+const TARGETS = ['index.html', 'about.html', 'teacher.html', 'sitemap.xml', 'llms.txt'];
 const ROBOTS_FILE = path.join(ROOT, 'robots.txt');
 
 function normalizeUrl(input) {

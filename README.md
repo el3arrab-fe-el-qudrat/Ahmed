@@ -38,11 +38,13 @@ assets/
   js/app.js             state -> URL -> render; card building; filters; sheet
   js/ui.js              theme toggle + mobile nav (shared by all pages)
   fonts/                IBM Plex Sans Arabic, self-hosted and subset (tools/build-fonts.md)
-  img/                  logo seal (mark-*.webp), favicons, maskable icons, OG cover
+  img/                  logo seal (mark-*.webp), the teacher's photos
+                        (teacher-portrait-*, teacher-standing-*), favicons, OG cover
   data/exams.json       GENERATED — do not edit by hand
 
 data/
   source/               the original, untouched export (the single source of truth)
+  source/photos/        the teacher's original photos, untouched
   build-report.json     GENERATED — what was published and what was excluded
 
 tools/
@@ -54,6 +56,7 @@ tools/
   set-site-url.mjs      stamps the real site URL into canonical/OG/sitemap
   serve.mjs             zero-dependency local preview server
   og-cover.template.html  source for assets/img/og-cover.jpg
+  build-photos.py       the teacher's photos -> assets/img (run only when a photo changes)
   build-fonts.md        how to refetch and re-subset the fonts
 ```
 
@@ -247,48 +250,65 @@ All external links carry `rel="noopener noreferrer"`.
 
 ## SEO and AI discoverability (GEO)
 
-The goal is twofold: rank in Google/Bing for Saudi students searching for
-«تجميعات اللفظي» / «تجميعات القدرات», and be the source that ChatGPT, Gemini,
-Claude, Copilot and Perplexity quote when asked about the teacher or about verbal
-GAT practice.
+The site is built around **the teacher, not the platform**: the goal is that
+«الأستاذ أحمد طلعت — مدرب القدرات» is the entity Google and the AI assistants
+(ChatGPT, Gemini, Claude, Copilot, Perplexity) recognise, and that the 301 free
+forms read as *his* resource.
 
-**What is in place**
+**Name collision — read this first.** Another Saudi Qudurat brand already uses the
+name «العراب» (el3rab.com, and the @el3rab.academy accounts, which use the exact
+phrase «العراب في القدرات»). Searching «أحمد طلعت» alone returns an Egyptian actor
+and a surgeon. So every title, H1, JSON-LD `name` and the first line of llms.txt
+leads with **الأستاذ أحمد طلعت** and pairs the name with **القدرات**; the brand
+comes second. Ask the owner whether those accounts are his.
+
+**On-site (done)**
 
 | Signal | Where |
 | --- | --- |
-| Keyword-first titles and descriptions («تجميعات اللفظي»، «القدرات العامة»، «قياس») | every page `<head>` |
-| Saudi targeting: `lang="ar"`, `og:locale ar_SA`, `hreflang="ar-sa"`, `geo.region SA`, `areaServed` | every page |
-| One entity graph: Organization → Person (the teacher) → Course → WebSite (with SearchAction for `?q=`) | JSON-LD in `index.html`, `teacher.html` |
-| A dedicated entity page for the teacher, so "أحمد طلعت ربيع" has one canonical answer | `teacher.html` |
-| Question-shaped content with FAQPage markup that matches the visible text word for word | `about.html`, `teacher.html` |
-| Freshness: `dateModified` stamped from the dataset on every build | `tools/build-data.mjs` |
-| `llms.txt`: facts, pages and naming notes for AI assistants, Arabic + English summary, figures generated from the data | `tools/build-data.mjs` |
-| `robots.txt` names Googlebot, Bingbot, GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended… | `robots.txt` |
-| Guard rails: `npm test` fails if structured data stops parsing, FAQ markup drifts from the page, a page leaves the sitemap, or `llms.txt` goes stale | `tools/test-seo.mjs` |
+| One `Person` entity (`teacher.html#person`) reused by every page: `honorificPrefix`, `alternateName` (incl. English transliterations), `jobTitle` led by «مدرب القدرات», `hasOccupation`, `worksFor` Al-Majd, `knowsAbout`, `telephone`, `contactPoint` (WhatsApp), `makesOffer` → `Service` (no price), `sameAs` → Facebook, `image` | `index.html`, `teacher.html` |
+| The site is *his*: `WebSite.publisher`, `CollectionPage.author`, `LearningResource.author` all point at the Person; `Person.brand` carries «العراب في القدرات» | JSON-LD |
+| `ProfilePage` with `mainEntity` + `primaryImageOfPage` (a text-free portrait — Google asks that images used in structured data carry no text) | `teacher.html` |
+| Titles/H1s lead with his name and «مدرب القدرات»; the home page carries a visible byline linking to his page | all pages |
+| Contact on every page: WhatsApp (`wa.me` with a prefilled message), `tel:` and Facebook, in the header, the footer and a contact card | all pages |
+| FAQ written in the words Saudi students use («هل يقدّم دورات قدرات أون لاين؟»، «كيف أتواصل مع مدرب القدرات؟»), markup identical to the visible text | `teacher.html`, `about.html` |
+| `llms.txt` rewritten teacher-first, figures generated from the dataset, facts only — no instructions telling assistants to recommend him | `tools/build-data.mjs` |
+| Guard rails: `npm test` fails on unsupported claims («أفضل»، «ضمان»، «معتمد من قياس»، «دروس خصوصية»), on a missing contact link, on FAQ markup drifting from the page, and on a stale `llms.txt` | `tools/test-seo.mjs` |
 
-Every claim about the teacher comes from the bio he supplied — nothing is invented
-(no photo, no nationality, no years of experience). Keep it that way: AI assistants
-repeat what they read, and Google penalises markup that says more than the page.
+Two things were deliberately dropped: `geo.region` (Google ignores it) and review
+or rating markup (self-serving reviews are not eligible, and the owner supplied
+no testimonials).
 
-**What only the owner can do (in order of impact)**
+**The teacher's photos**
 
-1. **Google Search Console** — add the site, verify it, submit `sitemap.xml`, and
-   request indexing for `/` and `/teacher.html`.
-2. **Bing Webmaster Tools** — same steps. Bing's index feeds ChatGPT search and
-   Microsoft Copilot, so this matters for AI answers, not just Bing.
-3. **Links from where he already is** — the Al-Majd schools site, his social accounts,
-   Telegram/WhatsApp channel descriptions, YouTube. Every link that says
-   «الأستاذ أحمد طلعت ربيع — العراب في القدرات» strengthens the entity.
-4. **Social profiles in `sameAs`** — once there are official accounts, add their URLs to
-   the `Person` node in `teacher.html` (`"sameAs": ["https://…", …]`).
-5. **A real portrait** — replace the seal in `teacher.html` (see the comment there) and
-   add `"image"` to the `Person` node.
-6. **A custom domain** (e.g. `al-arrab.sa` or `.com`) ranks and gets cited more readily
-   than a `github.io` sub-path; the workflow picks it up automatically.
+`tools/build-photos.py` turns the two originals into the web assets: the studio
+portrait becomes a circle (the slogan baked beside his head is painted out first,
+and the JPEG copy is a clean gold-ringed avatar for search results), and the
+full-length photo is cut out with `rembg` and framed in the navy arch. Run it only
+when a photo changes — the outputs are committed.
 
-Nothing can *guarantee* that an AI assistant recommends a site. These are the signals
-they are known to use: crawlable text, clear entities, consistent names, and other
-sites pointing at it.
+**What only the owner can do (in priority order)**
+
+1. **Google Search Console** — verify, submit `sitemap.xml`, request indexing of
+   `/teacher.html`.
+2. **Bing Webmaster Tools** — import from Search Console and enable IndexNow.
+   Bing's index feeds ChatGPT search and Copilot, so this is an AI-visibility step.
+3. **Make the name consistent everywhere** — Facebook page, WhatsApp Business
+   profile, YouTube/TikTok: the same «الأستاذ أحمد طلعت – مدرب القدرات», the same
+   phone format, each linking back to this site.
+4. **Mentions from other sites** — the Al-Majd schools site, course posters,
+   anything covering the Al-Aziziyah workshops. Web mentions correlate with AI
+   visibility far more strongly than backlinks alone.
+5. **A YouTube channel** with short verbal-section explanations, titled with his
+   name, added to `sameAs` in `teacher.html`.
+6. **Google Business Profile** — only if he genuinely qualifies (a real address or
+   a service area, not online-only), then import it into Bing Places.
+7. **A custom domain** (`.sa` or `.com`) — a stronger country and brand signal than
+   a `github.io` path.
+
+Not worth doing: Wikidata/Wikipedia entries for a non-notable person, FAQ markup
+for rich results (Google removed them in May 2026 — ours is for people and AI
+readers), or Course rich results (retired in June 2025).
 
 ## A note on the access code
 

@@ -2742,3 +2742,29 @@ a.tile:not([href]) {
 .contact-card__body {
   min-width: 0;
 }
+
+/* The header carries a brand, a WhatsApp link, the theme toggle and the menu:
+   on the narrowest phones they need a little less room each. */
+@media (max-width: 400px) {
+  .header__inner {
+    gap: var(--sp-2);
+  }
+
+  .brand {
+    gap: var(--sp-2);
+  }
+
+  .brand__mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brand__name {
+    font-size: var(--fs-md);
+  }
+
+  .header__actions .icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+}

@@ -111,7 +111,7 @@ def build_portrait():
         PORTRAIT_CY + PORTRAIT_R,
     )
     square = clean.crop(box)
-    for size in (720, 360):
+    for size in (720, 360, 144):
         square.resize((size, size), Image.LANCZOS).save(
             OUT / f"teacher-portrait-{size}.webp", "WEBP", quality=86, method=6
         )

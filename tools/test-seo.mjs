@@ -87,7 +87,27 @@ console.log('\ncross-page');
   for (const page of PAGES) for (const node of graphOf(read(page))) if (node['@id']) ids.set(node['@id'], node);
   const person = ids.get('__SITE_URL__teacher.html#person');
   assert('one Person entity for the teacher', person?.['@type'] === 'Person' && person.name === 'أحمد طلعت ربيع');
-  assert('organisation points at the teacher', JSON.stringify(ids.get('__SITE_URL__#organization')).includes('teacher.html#person'));
+  assert('he is a قدرات trainer first', person?.jobTitle?.[0] === 'مدرب القدرات');
+  assert('phone in E.164', person?.telephone === '+966501368526');
+  assert('Facebook in sameAs', (person?.sameAs || []).some((u) => u.startsWith('https://www.facebook.com/')));
+  assert('a text-free portrait as the Person image', String(person?.image?.url || '').includes('teacher-portrait'));
+  assert('courses offered, with no price', Boolean(person?.makesOffer) && !JSON.stringify(person.makesOffer).includes('price'));
+  assert('the site is published by him', JSON.stringify(ids.get('__SITE_URL__#website')).includes('teacher.html#person'));
+
+  for (const page of PAGES) {
+    const html = read(page);
+    assert(`${page} links to WhatsApp`, html.includes('https://wa.me/966501368526'));
+    assert(`${page} links to a phone call`, html.includes('tel:+966501368526'));
+    assert(`${page} links to Facebook`, html.includes('https://www.facebook.com/alastadh.ahmd.tl.t/'));
+  }
+
+  // Claims the owner did not make, and rivals' spellings, must never appear.
+  const forbidden = ['أفضل مدرب', 'أفضل مدرّب', 'ضمان الدرجة', 'نضمن', 'معتمد من قياس', 'مدرب قياس', 'دروس خصوصية', 'مدرس خصوصي', 'العِراب', 'العرّاب'];
+  for (const page of [...PAGES, 'llms.txt']) {
+    const text = read(page);
+    const hit = forbidden.filter((word) => text.includes(word));
+    assert(`${page} makes no unsupported claim`, hit.length === 0, hit.join(' | '));
+  }
 
   const sitemap = read('sitemap.xml');
   for (const page of PAGES) {
@@ -108,6 +128,8 @@ console.log('\nllms.txt');
   const { meta } = JSON.parse(read('assets/data/exams.json'));
   assert('exists and starts with an H1', llms.startsWith('# '));
   assert('has a summary blockquote', /^> /m.test(llms));
+  assert('leads with the teacher, not the platform', llms.split(String.fromCharCode(10))[0].includes('أحمد طلعت'));
+  assert('gives his WhatsApp number', llms.includes('+966 50 136 8526'));
   assert(`form count matches the dataset (${meta.total})`, llms.includes(`عدد النماذج: ${meta.total}`));
   assert('links every page', PAGES.every((p) => llms.includes(p === 'index.html' ? '(__SITE_URL__)' : `(__SITE_URL__${p})`)));
 }

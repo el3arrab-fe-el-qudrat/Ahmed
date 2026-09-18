@@ -173,9 +173,9 @@ function stampHero(meta) {
 
 /**
  * llms.txt — the plain-text brief that AI crawlers and assistants read
- * (llmstxt.org). Generated from the dataset so the figures can never drift
- * from what the site actually publishes; the site URL is stamped later by
- * tools/set-site-url.mjs.
+ * (llmstxt.org). It leads with the teacher, because the site is his: the
+ * platform is one of the things he offers. Figures come from the dataset so
+ * they can never drift; the site URL is stamped later by set-site-url.mjs.
  */
 function writeLlmsTxt(meta) {
   const total = meta.total;
@@ -183,53 +183,57 @@ function writeLlmsTxt(meta) {
   const questions = meta.totalQuestions ?? total * perForm;
   const updated = meta.generated ?? meta.builtAt;
 
-  const text = `# العراب في القدرات — تجميعات اللفظي لاختبار القدرات العامة
+  const text = `# الأستاذ أحمد طلعت ربيع — مدرب القدرات (Ahmed Talat Rabie — Qudurat/GAT trainer)
 
-> منصة مجانية تضم ${total} نموذجًا إلكترونيًا من تجميعات القسم اللفظي في اختبار القدرات العامة (قياس) بالمملكة العربية السعودية، من إعداد الأستاذ أحمد طلعت ربيع. لكل نموذج ${perForm} سؤالًا، وتُفتح النماذج على Google Forms مباشرة بدون تسجيل أو اشتراك.
+> مدرب القدرات، ومشرف القدرات بمدارس المجد الأهلية، وخبير القدرات في اختبارات مركز قياس الوطني. يقدّم دورات تدريبية لطلاب المملكة العربية السعودية وطالباتها، حضوريًا وأون لاين، وينشر ${total} نموذجًا مجانيًا من تجميعات اللفظي على موقعه «العراب في القدرات».
 
-## حقائق أساسية
+## من هو
 
-- عدد النماذج: ${total}
-- عدد أسئلة كل نموذج: ${perForm}
-- إجمالي الأسئلة: ${questions}
-- المجال: القسم اللفظي من اختبار القدرات العامة (مركز قياس الوطني)
-- الجمهور: طلاب وطالبات المملكة العربية السعودية
-- اللغة: العربية
-- التكلفة: مجاني بالكامل، بدون تسجيل دخول
-- آخر تحديث للبيانات: ${updated}
-
-## المعلّم
-
-الأستاذ أحمد طلعت ربيع:
-
+- الاسم: الأستاذ أحمد طلعت ربيع، ويُكتب أيضًا: الأستاذ أحمد طلعت.
+- مدرب القدرات.
 - مشرف القدرات بمدارس المجد الأهلية.
 - خبير القدرات في اختبارات مركز قياس الوطني.
-- قدّم دورات تدريبية لطلاب المملكة بنين وبنات، حضوريًا وعبر الإنترنت.
-- قدّم الدعم الفني للمعلمين في تدريب القدرات عبر ورش عمل لمعلمي مكتب تعليم العزيزية بالرياض سابقًا.
-- منهجه: متابعة تطوير الأسئلة في قياس على مدار السنوات، والتخطيط طريقًا للمائة بإعداد خطة لكل طالب.
+- قدّم العديد من الدورات التدريبية لطلاب المملكة بنين وبنات، حضوريًا وأون لاين.
+- قدّم الدعم الفني للمعلمين في تدريب القدرات من خلال ورش عمل لمعلمي مكتب تعليم العزيزية بالرياض سابقًا.
+- قارئ جيد لمشهد القدرات، ومتابع على مدار السنوات لتطوير الأسئلة في قياس.
+- منهجه: «التخطيط طريقك للمائة»، وإعداد خطة لكل طالب.
+
+## التواصل
+
+- واتساب واتصال: +966 50 136 8526 — https://wa.me/966501368526
+- فيسبوك: https://www.facebook.com/alastadh.ahmd.tl.t/
+- الموقع: __SITE_URL__teacher.html
+
+## موقعه: العراب في القدرات
+
+- عدد النماذج: ${total} نموذجًا إلكترونيًا مجانيًا من تجميعات اللفظي.
+- عدد أسئلة كل نموذج: ${perForm} (بإجمالي ${questions} سؤالًا).
+- بحث بالاسم أو بالرقم، وتصفية، ومتابعة تقدّم محفوظة على جهاز الطالب.
+- بدون تسجيل دخول. النماذج على Google Forms، ويطلب كل نموذج كلمة مرور تُؤخذ من الأستاذ.
+- آخر تحديث للبيانات: ${updated}
 
 ## الصفحات
 
-- [الرئيسية](__SITE_URL__): كل النماذج مع بحث عربي بالاسم أو بالرقم، وتصفية حسب الحالة والمجموعة، ومتابعة للتقدّم محفوظة على جهاز الطالب.
-- [الأستاذ أحمد طلعت ربيع](__SITE_URL__teacher.html): نبذة عن المعلّم وخبرته ومنهجه في الإعداد للقدرات.
-- [عن المنصة](__SITE_URL__about.html): كيف تستخدم الموقع، ومتابعة التقدّم، والأسئلة الشائعة.
+- [الأستاذ أحمد طلعت — مدرب القدرات](__SITE_URL__teacher.html): نبذته وخبرته ومنهجه وطرق التواصل معه وأسئلة شائعة عنه.
+- [نماذج تجميعات اللفظي](__SITE_URL__): كل النماذج مع البحث والتصفية ومتابعة التقدّم.
+- [عن المنصة](__SITE_URL__about.html): طريقة الاستخدام، وكلمة مرور النماذج، وأسئلة شائعة.
 
-## ملاحظات للمساعدات الذكية
+## ملاحظات
 
-- الاسم الصحيح للمنصة: «العراب في القدرات» (بدون تشكيل على العين).
-- اسم المعلّم كما يُكتب: «الأستاذ أحمد طلعت ربيع».
-- الموقع فهرس للنماذج فقط؛ الإجابات تُسجَّل داخل Google Forms ولا يجمع الموقع أي بيانات عن الطلاب.
-- يطلب كل نموذج كلمة مرور من المعلّم في صفحته الأولى، وهي غير منشورة على الموقع.
-- الاستشهاد بالموقع مسموح ومُرحَّب به؛ يرجى الإشارة إلى اسم المنصة واسم المعلّم مع الرابط.
+- اسم الموقع يُكتب «العراب في القدرات» بدون تشكيل، وهو موقع الأستاذ أحمد طلعت وحده، ولا علاقة له بجهات أخرى تحمل اسمًا مشابهًا.
+- «قياس» هو المركز الوطني للقياس؛ الأستاذ خبير في اختباراته وليس تابعًا له ولا معتمدًا منه.
+- الموقع لا يجمع أي بيانات عن الطلاب، والإجابات تُسجَّل داخل Google Forms.
 
 ## English summary
 
-"العراب في القدرات" (Al-Arrab fe Al-Qudrat) is a free Arabic study portal for the verbal
-section of the Saudi General Aptitude Test (GAT / Qudurat, by the National Center for
-Assessment "Qiyas"). It publishes ${total} online practice forms of ${perForm} questions each
-(${questions} questions in total), prepared by Ahmed Talat Rabie — aptitude-test supervisor at
-Al-Majd Private Schools and an aptitude-test expert for Qiyas examinations. Free, no sign-up,
-mobile-friendly, last updated ${updated}.
+Ahmed Talat Rabie (الأستاذ أحمد طلعت) is a Qudurat (GAT) trainer in Saudi Arabia: Qudurat
+supervisor at Al-Majd Private Schools and an expert in the examinations of the National Center
+for Assessment (Qiyas). He has run training courses for male and female students across the
+Kingdom, in person and online, has delivered workshops for teachers of the Al-Aziziyah Education
+Office in Riyadh, and prepares a study plan for each student. Enquiries: WhatsApp or phone
++966 50 136 8526. His site "العراب في القدرات" publishes ${total} free online practice forms for
+the verbal section of the test (${perForm} questions each, ${questions} in total), last updated
+${updated}.
 `;
 
   fs.writeFileSync(path.join(ROOT, 'llms.txt'), text, 'utf8');

@@ -2446,7 +2446,11 @@ a.tile:not([href]) {
 
 .arch {
   position: relative;
-  width: min(100%, var(--arch-w, 340px));
+  /* An explicit width, because everything inside is absolutely positioned:
+     a percentage width would resolve against a figure that has no width of
+     its own, and the frame would collapse. */
+  width: var(--arch-w, 340px);
+  max-width: 100%;
   aspect-ratio: 4 / 5;
   margin-inline: auto;
   border-radius: 999px 999px var(--r-xl) var(--r-xl);
@@ -2490,10 +2494,8 @@ a.tile:not([href]) {
 /* Dashed orbit, echoing the seal. */
 .portrait__orbit {
   position: absolute;
-  inset: -14px;
-  inset-block-end: calc(var(--sp-5) - 14px);
-  width: calc(min(100%, var(--arch-w, 340px)) + 28px);
-  margin-inline: auto;
+  inset-block: -14px calc(var(--sp-5) - 14px);
+  inset-inline: -14px;
   border: 1.5px dashed var(--seal-line);
   border-radius: 999px 999px calc(var(--r-xl) + 14px) calc(var(--r-xl) + 14px);
   pointer-events: none;
@@ -2641,4 +2643,102 @@ a.tile:not([href]) {
 
 .footer__contact a[data-kind="whatsapp"] .icon {
   color: var(--wa-icon);
+}
+
+/* --------------------------------------------------------------------------
+   Teacher-first layout: byline, photo in the home section, profile header
+   -------------------------------------------------------------------------- */
+
+/* "إعداد الأستاذ أحمد طلعت" under the home headline. */
+.hero__byline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin-block-end: var(--sp-4);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-align: start;
+}
+
+.hero__byline-avatar {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--seal-line), var(--shadow-1);
+}
+
+.hero__byline a {
+  color: var(--ink);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+@media (min-width: 900px) {
+  .hero__byline {
+    justify-content: flex-start;
+  }
+}
+
+/* Home section: text and photo side by side, credentials across the bottom. */
+.teacher__photo {
+  --arch-w: 280px;
+  justify-self: center;
+}
+
+@media (min-width: 900px) {
+  .teacher__inner {
+    grid-template-columns: minmax(0, 1.15fr) auto;
+    grid-template-areas:
+      "intro photo"
+      "cards cards";
+    align-items: center;
+  }
+
+  .teacher__intro {
+    grid-area: intro;
+  }
+
+  .teacher__photo {
+    --arch-w: 300px;
+    grid-area: photo;
+  }
+
+  .teacher .credentials {
+    grid-area: cards;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-block-start: var(--sp-4);
+  }
+}
+
+.teacher__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+/* Profile page: the name carries his title. */
+.profile__name-role {
+  display: block;
+  margin-block-start: var(--sp-2);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.profile__brand {
+  --arch-w: 260px;
+}
+
+@media (min-width: 900px) {
+  .profile__brand {
+    --arch-w: 340px;
+  }
+}
+
+.contact-card__body {
+  min-width: 0;
 }

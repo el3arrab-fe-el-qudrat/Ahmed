@@ -26,6 +26,7 @@ index.html              the portal: hero + search, quick access, filters, exam g
 teacher.html            الأستاذ — the teacher's profile page (Person / ProfilePage / FAQ schema)
 about.html              عن المنصة — how to use the site, FAQ (FAQPage schema)
 llms.txt                GENERATED — plain-text brief for AI assistants (llmstxt.org)
+sitemap.xml             GENERATED — pages + <lastmod> + his photos, for image search
 robots.txt              allows search engines and AI crawlers by name
 404.html                fully self-contained (no external CSS/JS/images at all)
 
@@ -273,6 +274,7 @@ comes second. Ask the owner whether those accounts are his.
 | Contact on every page: WhatsApp (`wa.me` with a prefilled message), `tel:` and Facebook, in the header, the footer and a contact card | all pages |
 | FAQ written in the words Saudi students use («هل يقدّم دورات قدرات أون لاين؟»، «كيف أتواصل مع مدرب القدرات؟»), markup identical to the visible text | `teacher.html`, `about.html` |
 | `llms.txt` rewritten teacher-first, figures generated from the dataset, facts only — no instructions telling assistants to recommend him | `tools/build-data.mjs` |
+| `sitemap.xml` generated on every build, so `<lastmod>` tracks the dataset; his portrait is declared as an image of the pages it appears on, which is how a static site gets into Google Images for «أحمد طلعت قدرات» | `tools/build-data.mjs` |
 | Guard rails: `npm test` fails on unsupported claims («أفضل»، «ضمان»، «معتمد من قياس»، «دروس خصوصية»), on a missing contact link, on FAQ markup drifting from the page, and on a stale `llms.txt` | `tools/test-seo.mjs` |
 
 Two things were deliberately dropped: `geo.region` (Google ignores it) and review

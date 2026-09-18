@@ -65,6 +65,26 @@ for (const page of PAGES) {
   assert('names the teacher in text', visibleText(html).includes('أحمد طلعت ربيع'));
   assert('brand written without harakat', !html.includes('العِراب'));
 
+  {
+    const defined = new Set(graph.map((node) => node['@id']).filter(Boolean));
+    const referenced = new Set();
+    JSON.stringify(graph).replace(/\{"@id":"([^"]+)"\}/g, (match, id) => {
+      referenced.add(id);
+      return match;
+    });
+    const dangling = [...referenced].filter((id) => !defined.has(id));
+    assert('every @id reference resolves on this page', dangling.length === 0, dangling.join(' | '));
+  }
+
+  assert(
+    'every <img> declares width and height',
+    [...html.matchAll(/<img\b[^>]*>/gs)].every((m) => /\bwidth=/.test(m[0]) && /\bheight=/.test(m[0])),
+  );
+  assert(
+    'every target="_blank" link is rel="noopener noreferrer"',
+    [...html.matchAll(/<a\b[^>]*target="_blank"[^>]*>/gs)].every((m) => /rel="noopener noreferrer"/.test(m[0])),
+  );
+
   const faq = graph.find((node) => node['@type'] === 'FAQPage');
   if (faq) {
     // Compared without whitespace: inline tags (<bdi> around the phone number,
@@ -84,7 +104,13 @@ for (const page of PAGES) {
 console.log('\ncross-page');
 {
   const ids = new Map();
-  for (const page of PAGES) for (const node of graphOf(read(page))) if (node['@id']) ids.set(node['@id'], node);
+  for (const page of PAGES) {
+    for (const node of graphOf(read(page))) {
+      if (!node['@id']) continue;
+      const seen = ids.get(node['@id']);
+      if (!seen || Object.keys(node).length > Object.keys(seen).length) ids.set(node['@id'], node);
+    }
+  }
   const person = ids.get('__SITE_URL__teacher.html#person');
   assert('one Person entity for the teacher', person?.['@type'] === 'Person' && person.name === 'أحمد طلعت ربيع');
   assert('he is a قدرات trainer first', person?.jobTitle?.[0] === 'مدرب القدرات');
@@ -95,6 +121,18 @@ console.log('\ncross-page');
   assert('the site is published by him', JSON.stringify(ids.get('__SITE_URL__#website')).includes('teacher.html#person'));
 
   for (const page of PAGES) {
+    for (const node of graphOf(read(page))) {
+      const full = node['@id'] && ids.get(node['@id']);
+      if (!full || full === node) continue;
+      const clashes = Object.keys(node).filter(
+        (key) => key !== '@id' && JSON.stringify(node[key]) !== JSON.stringify(full[key]),
+      );
+      const id = node['@id'].replace('__SITE_URL__', '/');
+      assert(`${page}: ${id} agrees with its full definition`, clashes.length === 0, clashes.join(' | '));
+    }
+  }
+
+  for (const page of PAGES) {
     const html = read(page);
     assert(`${page} links to WhatsApp`, html.includes('https://wa.me/966501368526'));
     assert(`${page} links to a phone call`, html.includes('tel:+966501368526'));
@@ -102,22 +140,47 @@ console.log('\ncross-page');
   }
 
   // Claims the owner did not make, and rivals' spellings, must never appear.
-  const forbidden = ['أفضل مدرب', 'أفضل مدرّب', 'ضمان الدرجة', 'نضمن', 'معتمد من قياس', 'مدرب قياس', 'دروس خصوصية', 'مدرس خصوصي', 'العِراب', 'العرّاب'];
+  const forbidden = [
+    /أفضل/, /\bbest\b/i, /الأول في|رقم واحد/,
+    /نضمن|مضمون|ضمان الدرجة|نتيجة مضمونة|guarantee/i,
+    /معتمد\s*(من|لدى|في)\s*قياس|مدرب قياس|تابع لقياس|بالتعاون مع قياس/,
+    /دروس خصوصية|مدرس خصوصي|درس خاص/,
+    /العِراب|العرّاب/,
+    /\d+\s*(سنة|سنوات|عام|عامًا|عاما)\s*(من\s*)?(ال)?خبرة/, /خبرة\s*\d+\s*(سنة|سنوات|عام)/,
+    /\d{2,}\s*(طالب|طالبة|متدرب|متدربة)/,
+    /ريال|\bSAR\b|السعر|الأسعار/,
+  ];
   for (const page of [...PAGES, 'llms.txt']) {
     const text = read(page);
-    const hit = forbidden.filter((word) => text.includes(word));
+    const hit = forbidden.filter((pattern) => pattern.test(text)).map(String);
     assert(`${page} makes no unsupported claim`, hit.length === 0, hit.join(' | '));
   }
 
   const sitemap = read('sitemap.xml');
+  // Locally the sitemap still carries the placeholder; after a deploy it carries
+  // the real origin. Both must pass, so the page name is matched, not the base.
+  const base = '(?:__SITE_URL__|https?://[^<]*?/)';
   for (const page of PAGES) {
-    const loc = page === 'index.html' ? '<loc>__SITE_URL__</loc>' : `<loc>__SITE_URL__${page}</loc>`;
-    assert(`sitemap lists ${page}`, sitemap.includes(loc));
+    const loc = page === 'index.html' ? `<loc>${base}</loc>` : `<loc>${base}${page}</loc>`;
+    assert(`sitemap lists ${page}`, new RegExp(loc).test(sitemap));
   }
+  const urlCount = (sitemap.match(/<url>/g) || []).length;
+  assert('sitemap closes every <url>', urlCount === (sitemap.match(/<\/url>/g) || []).length);
+  assert(
+    'sitemap dates every page',
+    (sitemap.match(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g) || []).length === urlCount,
+  );
+  assert('sitemap declares the image namespace', sitemap.includes('sitemap-image/1.1'));
+  assert('sitemap offers his portrait to image search', sitemap.includes('teacher-portrait.jpg'));
+  assert(
+    'every sitemap image is titled',
+    (sitemap.match(/<image:loc>/g) || []).length ===
+      (sitemap.match(/<image:title>/g) || []).length,
+  );
 
   const robots = read('robots.txt');
   for (const bot of ['Googlebot', 'Bingbot', 'GPTBot', 'OAI-SearchBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended']) {
-    assert(`robots.txt allows ${bot}`, new RegExp(`User-agent: ${bot}\s*\nAllow: /`).test(robots));
+    assert(`robots.txt allows ${bot}`, new RegExp(`User-agent: ${bot}[ \\t]*\\r?\\nAllow: /`).test(robots));
   }
   assert('robots.txt disallows nothing', !/^\s*Disallow:\s*\S/m.test(robots));
 }

@@ -462,8 +462,9 @@
 .seal__caption {
   position: absolute;
   inset-block-end: 0;
-  inset-inline-start: 50%;
-  translate: 50% 0;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: max-content;
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
@@ -2128,6 +2129,12 @@ a.tile:not([href]) {
   line-height: var(--lh-normal);
 }
 
+.teacher__bio strong,
+.profile__lead strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .teacher__bio + .teacher__bio {
   margin-block-start: var(--sp-3);
 }
@@ -2346,7 +2353,7 @@ a.tile:not([href]) {
 
 .quote {
   position: relative;
-  padding: var(--sp-8) var(--sp-6) var(--sp-6);
+  padding: var(--sp-6);
   background: linear-gradient(150deg, var(--gold-soft), var(--surface));
   border: 1px solid var(--border);
   border-inline-start: 4px solid var(--gold);
@@ -2355,17 +2362,17 @@ a.tile:not([href]) {
   overflow: hidden;
 }
 
-/* A large decorative quotation mark on the far side, clear of the text. */
+/* A drawn mark rather than a quotation mark: this panel states his approach,
+   it does not quote him. */
 .quote::before {
-  content: "”";
+  content: "";
   position: absolute;
-  inset-block-start: 0.05em;
-  inset-inline-end: 0.18em;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 6.5rem;
-  line-height: 1;
-  color: var(--gold);
-  opacity: 0.3;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  width: 128px;
+  height: 128px;
+  background: radial-gradient(circle at 100% 0, var(--gold), transparent 70%);
+  opacity: 0.22;
   pointer-events: none;
 }
 
@@ -2504,9 +2511,10 @@ a.tile:not([href]) {
 .portrait__caption {
   position: absolute;
   inset-block-end: 0;
-  inset-inline-start: 50%;
+  inset-inline: 0;
   z-index: 3;
-  translate: 50% 0;
+  margin-inline: auto;
+  width: max-content;
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);
@@ -2588,14 +2596,36 @@ a.tile:not([href]) {
   line-height: var(--lh-snug);
 }
 
+.section__note {
+  max-width: 68ch;
+  margin-block-start: var(--sp-5);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+  color: var(--ink-3);
+}
+
 .contact-card__phone {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
   margin-block-start: var(--sp-3);
   font-size: var(--fs-xl);
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--ink);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.contact-card__phone:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+.contact-card__phone .icon {
+  color: var(--gold-ink);
 }
 
 .contact-card__actions {
@@ -2616,7 +2646,7 @@ a.tile:not([href]) {
 .footer__contact {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-2) var(--sp-4);
+  gap: var(--sp-3) var(--sp-4);
   width: 100%;
   font-size: var(--fs-sm);
 }
@@ -2625,15 +2655,18 @@ a.tile:not([href]) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
+  padding-block: var(--sp-1);
   color: var(--ink-2);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-underline-offset: 3px;
   border-radius: 4px;
 }
 
 .footer__contact a:hover {
   color: var(--ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration-color: currentColor;
 }
 
 .footer__contact .icon {

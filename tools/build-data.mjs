@@ -23,6 +23,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_DIR = path.join(ROOT, 'data', 'source');
 const OUT_FILE = path.join(ROOT, 'assets', 'data', 'exams.json');
 const REPORT_FILE = path.join(ROOT, 'data', 'build-report.json');
+const EOL = '\n';
 
 /* -------------------------------------------------------------------------- */
 /* Arabic text normalisation — shared with the client (assets/js/normalize.js). */
@@ -185,7 +186,7 @@ function writeLlmsTxt(meta) {
 
   const text = `# الأستاذ أحمد طلعت ربيع — مدرب القدرات (Ahmed Talat Rabie — Qudurat/GAT trainer)
 
-> مدرب القدرات، ومشرف القدرات بمدارس المجد الأهلية، وخبير القدرات في اختبارات مركز قياس الوطني. يقدّم دورات تدريبية لطلاب المملكة العربية السعودية وطالباتها، حضوريًا وأون لاين، وينشر ${total} نموذجًا مجانيًا من تجميعات اللفظي على موقعه «العراب في القدرات».
+> مدرب القدرات، ومشرف القدرات بمدارس المجد الأهلية، وخبير القدرات في اختبارات مركز قياس الوطني. يقدّم دورات تدريبية لطلاب المملكة العربية السعودية وطالباتها، حضوريًا وأون لاين، وينشر ${total} ${unitNoun(total, 'exam')} مجاني من تجميعات اللفظي على موقعه «العراب في القدرات».
 
 ## من هو
 
@@ -195,8 +196,8 @@ function writeLlmsTxt(meta) {
 - خبير القدرات في اختبارات مركز قياس الوطني.
 - قدّم العديد من الدورات التدريبية لطلاب المملكة بنين وبنات، حضوريًا وأون لاين.
 - قدّم الدعم الفني للمعلمين في تدريب القدرات من خلال ورش عمل لمعلمي مكتب تعليم العزيزية بالرياض سابقًا.
-- قارئ جيد لمشهد القدرات، ومتابع على مدار السنوات لتطوير الأسئلة في قياس.
-- منهجه: «التخطيط طريقك للمائة»، وإعداد خطة لكل طالب.
+- قارئ جيد لمشهد القدرات، ومتابع على مدار السنوات لتطوّر الأسئلة في قياس.
+- يعتمد التخطيط طريقًا للمائة، وإعداد الخطط لطلابه من أهم مميزاته.
 
 ## التواصل
 
@@ -206,7 +207,7 @@ function writeLlmsTxt(meta) {
 
 ## موقعه: العراب في القدرات
 
-- عدد النماذج: ${total} نموذجًا إلكترونيًا مجانيًا من تجميعات اللفظي.
+- عدد النماذج: ${total} ${unitNoun(total, 'exam')} إلكتروني مجاني من تجميعات اللفظي.
 - عدد أسئلة كل نموذج: ${perForm} (بإجمالي ${questions} سؤالًا).
 - بحث بالاسم أو بالرقم، وتصفية، ومتابعة تقدّم محفوظة على جهاز الطالب.
 - بدون تسجيل دخول. النماذج على Google Forms، ويطلب كل نموذج كلمة مرور تُؤخذ من الأستاذ.
@@ -229,8 +230,10 @@ function writeLlmsTxt(meta) {
 Ahmed Talat Rabie (الأستاذ أحمد طلعت) is a Qudurat (GAT) trainer in Saudi Arabia: Qudurat
 supervisor at Al-Majd Private Schools and an expert in the examinations of the National Center
 for Assessment (Qiyas). He has run training courses for male and female students across the
-Kingdom, in person and online, has delivered workshops for teachers of the Al-Aziziyah Education
-Office in Riyadh, and prepares a study plan for each student. Enquiries: WhatsApp or phone
+Kingdom, in person and online, has previously delivered training workshops supporting teachers of
+the Al-Aziziyah Education Office in Riyadh, and prepares a study plan for each student. He is an
+expert in the Qiyas examinations; he is not affiliated with, employed by, or endorsed by Qiyas.
+Enquiries: WhatsApp or phone
 +966 50 136 8526. His site "العراب في القدرات" publishes ${total} free online practice forms for
 the verbal section of the test (${perForm} questions each, ${questions} in total), last updated
 ${updated}.
@@ -238,6 +241,91 @@ ${updated}.
 
   fs.writeFileSync(path.join(ROOT, 'llms.txt'), text, 'utf8');
   console.log('llms.txt    : written from the dataset');
+}
+
+/**
+ * sitemap.xml — regenerated on every build so <lastmod> can never drift from
+ * the dataset, and so his portrait is offered to Google Images next to the
+ * pages it appears on (an image sitemap is the only place a static site can
+ * declare that link). The site URL is stamped later by set-site-url.mjs,
+ * exactly as in llms.txt.
+ */
+function writeSitemap(meta) {
+  const updated = meta.generated ?? meta.builtAt;
+  const portrait = {
+    loc: '__SITE_URL__assets/img/teacher-portrait.jpg',
+    title: 'الأستاذ أحمد طلعت ربيع — مدرب القدرات',
+  };
+  const standing = {
+    loc: '__SITE_URL__assets/img/teacher-standing-720.webp',
+    title: 'الأستاذ أحمد طلعت ربيع، مدرب القدرات ومشرف القدرات بمدارس المجد الأهلية',
+  };
+
+  const pages = [
+    { loc: '__SITE_URL__', changefreq: 'weekly', priority: '1.0', images: [portrait] },
+    {
+      loc: '__SITE_URL__teacher.html',
+      changefreq: 'monthly',
+      priority: '0.9',
+      images: [standing, portrait],
+    },
+    { loc: '__SITE_URL__about.html', changefreq: 'monthly', priority: '0.5', images: [] },
+  ];
+
+  const lines = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
+    '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
+  ];
+
+  for (const page of pages) {
+    lines.push('  <url>');
+    lines.push(`    <loc>${page.loc}</loc>`);
+    lines.push(`    <lastmod>${updated}</lastmod>`);
+    lines.push(`    <changefreq>${page.changefreq}</changefreq>`);
+    lines.push(`    <priority>${page.priority}</priority>`);
+    for (const img of page.images) {
+      lines.push('    <image:image>');
+      lines.push(`      <image:loc>${img.loc}</image:loc>`);
+      lines.push(`      <image:title>${escapeXml(img.title)}</image:title>`);
+      lines.push('    </image:image>');
+    }
+    lines.push('  </url>');
+  }
+  lines.push('</urlset>');
+
+  const xml = lines.join(EOL) + EOL;
+  // A rebuild must never un-deploy the sitemap, so an already-stamped absolute
+  // URL is kept instead of being reverted to the placeholder.
+  const site = readStampedSiteUrl();
+  const next = site ? xml.split('__SITE_URL__').join(site) : xml;
+
+  const target = path.join(ROOT, 'sitemap.xml');
+  const before = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : '';
+  if (next === before) {
+    console.log('sitemap.xml : already current');
+    return;
+  }
+  fs.writeFileSync(target, next, 'utf8');
+  console.log('sitemap.xml : written from the dataset');
+}
+
+/** The URL set-site-url.mjs stamped last, if this checkout has been deployed. */
+function readStampedSiteUrl() {
+  try {
+    const raw = fs.readFileSync(path.join(ROOT, 'data', '.site-url'), 'utf8').trim();
+    return /^https?:\/\/\S+$/.test(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function escapeXml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function findSourceFile() {
@@ -379,6 +467,7 @@ function main() {
 
   stampHero(payload.meta);
   writeLlmsTxt(payload.meta);
+  writeSitemap(payload.meta);
 
   const report = {
     sourceFile: path.relative(ROOT, sourceFile).replace(/\\/g, '/'),

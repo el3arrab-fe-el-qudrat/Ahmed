@@ -132,6 +132,16 @@ console.log('\ncross-page');
     }
   }
 
+  assert(
+    'the Person disambiguates himself from the same-named brand',
+    String(person?.disambiguatingDescription || '').includes('اسمًا مشابهًا'),
+  );
+  assert('the site is named after him first', String(ids.get('__SITE_URL__#website')?.name || '').startsWith('الأستاذ أحمد طلعت'));
+
+  for (const page of [...PAGES, 'llms.txt']) {
+    assert(`${page} says the brand is his alone`, read(page).includes('اسمًا مشابهًا'));
+  }
+
   for (const page of PAGES) {
     const html = read(page);
     assert(`${page} links to WhatsApp`, html.includes('https://wa.me/966501368526'));

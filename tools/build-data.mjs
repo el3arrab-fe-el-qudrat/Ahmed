@@ -23,6 +23,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_DIR = path.join(ROOT, 'data', 'source');
 const OUT_FILE = path.join(ROOT, 'assets', 'data', 'exams.json');
 const REPORT_FILE = path.join(ROOT, 'data', 'build-report.json');
+/** The teacher's shortlist of the sections that recur most in the real exam. */
+const PRIORITY_FILE = path.join(SOURCE_DIR, 'priority.json');
 const EOL = '\n';
 
 /* -------------------------------------------------------------------------- */
@@ -142,6 +144,11 @@ function stampHero(meta) {
     html = fillMarker(html, 'data-unit="question"', unitNoun(meta.totalQuestions, 'question'));
   }
 
+  if (meta.priority) {
+    html = fillMarker(html, 'data-stat="priority"', arabicNumber(meta.priority.count));
+    html = fillMarker(html, 'data-unit="priority"', meta.priority.label);
+  }
+
   if (meta.generated) {
     html = fillMarker(html, 'data-stat="updated"', formatDate(meta.generated));
     html = html.replace(
@@ -183,10 +190,27 @@ function writeLlmsTxt(meta) {
   const perForm = meta.questionsPerForm ?? 13;
   const questions = meta.totalQuestions ?? total * perForm;
   const updated = meta.generated ?? meta.builtAt;
+  const key = meta.priority;
+  // The shortlist is the thing that sets this site apart from a bare link
+  // dump, so it is stated in the summary an assistant is most likely to quote.
+  const keySummary = key
+    ? ` ومن بينها ${key.count} قسمًا هي «${key.label}» في اختبارات قياس.`
+    : '';
+  const keySection = key
+    ? `
+## ${key.label}
+
+- ${key.count} قسمًا من أصل ${total} صنّفها الأستاذ أحمد طلعت على أنها ${key.label} في اختبارات قياس.${
+        key.blurb ? `\n- ${key.blurb}` : ''
+      }
+- تُعرَض على الموقع بشارة على البطاقة، ولها مفتاح تصفية مستقل وشريط تقدّم خاص بها.
+- رابط مباشر يفتح هذه الأقسام وحدها: __SITE_URL__?key=1
+${key.updated ? `- آخر مراجعة للقائمة: ${key.updated}\n` : ''}`
+    : '';
 
   const text = `# الأستاذ أحمد طلعت ربيع — مدرب القدرات (Ahmed Talat Rabie — Qudurat/GAT trainer)
 
-> مدرب القدرات، ومشرف القدرات بمدارس المجد الأهلية، وخبير القدرات في اختبارات مركز قياس الوطني. يقدّم دورات تدريبية لطلاب المملكة العربية السعودية وطالباتها، حضوريًا وأون لاين، وينشر ${total} ${unitNoun(total, 'exam')} مجاني من تجميعات اللفظي على موقعه «العراب في القدرات».
+> مدرب القدرات، ومشرف القدرات بمدارس المجد الأهلية، وخبير القدرات في اختبارات مركز قياس الوطني. يقدّم دورات تدريبية لطلاب المملكة العربية السعودية وطالباتها، حضوريًا وأون لاين، وينشر ${total} ${unitNoun(total, 'exam')} مجاني من تجميعات اللفظي على موقعه «العراب في القدرات».${keySummary}
 
 ## من هو
 
@@ -209,10 +233,12 @@ function writeLlmsTxt(meta) {
 
 - عدد النماذج: ${total} ${unitNoun(total, 'exam')} إلكتروني مجاني من تجميعات اللفظي.
 - عدد أسئلة كل نموذج: ${perForm} (بإجمالي ${questions} سؤالًا).
-- بحث بالاسم أو بالرقم، وتصفية، ومتابعة تقدّم محفوظة على جهاز الطالب.
+- بحث بالاسم أو بالرقم، وتصفية، ومتابعة تقدّم محفوظة على جهاز الطالب.${
+    key ? `\n- ${key.count} قسمًا منها مُعلَّمة بأنها «${key.label}»، ولها مفتاح تصفية مستقل.` : ''
+  }
 - بدون تسجيل دخول. النماذج على Google Forms، ويطلب كل نموذج كلمة مرور تُؤخذ من الأستاذ.
 - آخر تحديث للبيانات: ${updated}
-
+${keySection}
 ## الصفحات
 
 - [الأستاذ أحمد طلعت — مدرب القدرات](__SITE_URL__teacher.html): نبذته وخبرته ومنهجه وطرق التواصل معه وأسئلة شائعة عنه.
@@ -236,7 +262,12 @@ expert in the Qiyas examinations; he is not affiliated with, employed by, or end
 Enquiries: WhatsApp or phone
 +966 50 136 8526. His site "العراب في القدرات" publishes ${total} free online practice forms for
 the verbal section of the test (${perForm} questions each, ${questions} in total), last updated
-${updated}.
+${updated}.${
+    key
+      ? ` Of those, ${key.count} are flagged as the passages that recur most often in the real
+exam ("${key.label}"); the site filters to them alone at ?key=1.`
+      : ''
+  }
 `;
 
   fs.writeFileSync(path.join(ROOT, 'llms.txt'), text, 'utf8');
@@ -328,6 +359,48 @@ function escapeXml(text) {
     .replace(/"/g, '&quot;');
 }
 
+/* -------------------------------------------------------------------------- */
+/* Priority shortlist                                                          */
+/*                                                                             */
+/* `data/source/priority.json` carries the section numbers the teacher marks as */
+/* the ones that recur most in the real exam. It is a separate file on purpose: */
+/* the forms export is a machine dump that gets replaced wholesale, while this   */
+/* list is his editorial judgement and is revised on its own schedule. Updating  */
+/* it is a one-file edit plus `npm run build:data` — never a code change.        */
+/* -------------------------------------------------------------------------- */
+
+const DEFAULT_PRIORITY_LABEL = 'الأكثر تكرارًا';
+
+function readPriority() {
+  const empty = { label: DEFAULT_PRIORITY_LABEL, blurb: null, updated: null, numbers: new Set() };
+  if (!fs.existsSync(PRIORITY_FILE)) return empty;
+
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(PRIORITY_FILE, 'utf8'));
+  } catch (error) {
+    // A malformed shortlist must not take the whole site down: the build
+    // continues without it, loudly.
+    console.warn(`   ! priority.json is not valid JSON — ignored (${error.message})`);
+    return empty;
+  }
+
+  const listed = Array.isArray(raw?.sections) ? raw.sections : [];
+  const numbers = new Set();
+  for (const value of listed) {
+    const n = Number(value);
+    if (Number.isInteger(n) && n > 0) numbers.add(n);
+  }
+
+  return {
+    label: typeof raw?.label === 'string' && raw.label.trim() ? raw.label.trim() : DEFAULT_PRIORITY_LABEL,
+    blurb: typeof raw?.blurb === 'string' && raw.blurb.trim() ? raw.blurb.trim() : null,
+    updated: typeof raw?.updated === 'string' ? raw.updated : null,
+    numbers,
+    listed: listed.length,
+  };
+}
+
 function findSourceFile() {
   if (!fs.existsSync(SOURCE_DIR)) {
     throw new Error(`Source directory not found: ${SOURCE_DIR}`);
@@ -335,7 +408,9 @@ function findSourceFile() {
   const candidates = fs
     .readdirSync(SOURCE_DIR)
     .filter((f) => f.toLowerCase().endsWith('.json'))
-    .map((f) => path.join(SOURCE_DIR, f));
+    .map((f) => path.join(SOURCE_DIR, f))
+    // The priority shortlist lives here too, but it is not a forms export.
+    .filter((f) => f !== PRIORITY_FILE);
 
   if (!candidates.length) {
     throw new Error(`No .json export found in ${SOURCE_DIR}`);
@@ -347,6 +422,7 @@ function findSourceFile() {
 function main() {
   const sourceFile = findSourceFile();
   const raw = JSON.parse(fs.readFileSync(sourceFile, 'utf8'));
+  const priority = readPriority();
 
   const sourceForms = Array.isArray(raw) ? raw : raw.forms;
   if (!Array.isArray(sourceForms)) {
@@ -410,6 +486,8 @@ function main() {
     else record.u = canonical;
     if (shortMatch) record.s = shortMatch[1];
     else if (short) record.su = short;
+    // One flag byte rather than a second array the client would have to join.
+    if (priority.numbers.has(number)) record.p = 1;
 
     exams.push(record);
   }
@@ -443,6 +521,12 @@ function main() {
 
   const questionsPerForm = Number(raw?.questions_per_form) || null;
 
+  // A number on the shortlist that no published form answers to is a typo in
+  // the shortlist, not a reason to fail: it is dropped and reported.
+  const published = new Set(exams.map((e) => e.n));
+  const priorityUnknown = [...priority.numbers].filter((n) => !published.has(n)).sort((a, b) => a - b);
+  const priorityCount = exams.filter((e) => e.p).length;
+
   const payload = {
     meta: {
       // The brand is always written without harakat («العراب», not «العِراب»),
@@ -457,6 +541,14 @@ function main() {
       first: min,
       last: max,
       ranges,
+      priority: priorityCount
+        ? {
+            label: priority.label,
+            blurb: priority.blurb,
+            count: priorityCount,
+            updated: priority.updated,
+          }
+        : null,
       builtAt: new Date().toISOString().slice(0, 10),
     },
     exams,
@@ -475,6 +567,12 @@ function main() {
     published: exams.length,
     excluded: issues.length,
     issues,
+    priority: {
+      label: priority.label,
+      listed: priority.listed ?? 0,
+      flagged: priorityCount,
+      unknown: priorityUnknown,
+    },
     outputBytes: fs.statSync(OUT_FILE).size,
     ranges,
   };
@@ -485,6 +583,8 @@ function main() {
   console.log(`published   : ${exams.length}`);
   console.log(`excluded    : ${issues.length}`);
   for (const i of issues) console.log(`   ! ${i.where} — ${i.reason} ${i.value ?? ''}`);
+  console.log(`priority    : ${priorityCount} flagged "${priority.label}"`);
+  for (const n of priorityUnknown) console.log(`   ! priority ${n} — no published form with that number`);
   console.log(`ranges      : ${ranges.map((r) => `${r.from}-${r.to}(${r.count})`).join(' ')}`);
   console.log(`output      : assets/data/exams.json  (${(report.outputBytes / 1024).toFixed(1)} KB)`);
 

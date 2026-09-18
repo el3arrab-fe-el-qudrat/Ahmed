@@ -66,6 +66,21 @@ const el = {
   progressLabel: $('#progressLabel'),
   progressPct: $('#progressPct'),
   progressReset: $('#progressReset'),
+  progressKeyTrack: $('#progressKeyTrack'),
+  progressKeyBar: $('#progressKeyBar'),
+  progressKeyFill: $('#progressKeyFill'),
+  progressKeyName: $('#progressKeyName'),
+  progressKeyPct: $('#progressKeyPct'),
+  keyBar: $('#keyBar'),
+  keyToggle: $('#keyToggle'),
+  keyToggleLabel: $('#keyToggleLabel'),
+  keyToggleCount: $('#keyToggleCount'),
+  keyHint: $('#keyHint'),
+  sortKeyOption: $('#sortKeyOption'),
+  tileKey: $('#tileKey'),
+  tileKeyLabel: $('#tileKeyLabel'),
+  tileKeyMeta: $('#tileKeyMeta'),
+  tileKeyState: $('#tileKeyState'),
   tileResume: $('#tileResume'),
   tileResumeLabel: $('#tileResumeLabel'),
   tileResumeMeta: $('#tileResumeMeta'),
@@ -81,13 +96,14 @@ const el = {
   statTotal: $$('[data-stat="total"]'),
   statQuestions: $$('[data-stat="questions"]'),
   statUpdated: $$('[data-stat="updated"]'),
+  statPriority: $$('[data-stat="priority"]'),
 };
 
 /* -------------------------------------------------------------------------- */
 /* State                                                                       */
 /* -------------------------------------------------------------------------- */
 
-const DEFAULTS = { q: '', range: 'all', status: 'all', sort: 'number-asc' };
+const DEFAULTS = { q: '', range: 'all', status: 'all', sort: 'number-asc', key: 'all' };
 
 const state = {
   ...DEFAULTS,
@@ -100,8 +116,14 @@ const state = {
   results: [],
   fuzzy: false,
   shown: 0,
-  /** Result count per status tab, under the current range and search. */
+  /** Result count per status tab, under the current range, shortlist and search. */
   counts: { all: 0, todo: 0, done: 0, fav: 0 },
+  /**
+   * The teacher's "most repeated" shortlist, as published in the dataset:
+   * { label, blurb, count, updated } — or null when this build carries none,
+   * in which case every part of the UI that mentions it stays hidden.
+   */
+  priority: null,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -247,6 +269,21 @@ function debounce(fn, wait) {
   };
 }
 
+/* -------------------------------------------------------------------------- */
+/* The shortlist                                                               */
+/*                                                                             */
+/* `p` is stamped on a record by tools/build-data.mjs from                      */
+/* data/source/priority.json. Nothing here knows which numbers are on the list: */
+/* replacing that file and rebuilding is the whole update procedure.            */
+/* -------------------------------------------------------------------------- */
+
+const isKey = (exam) => Boolean(exam?.p);
+
+/** The published label, or a safe default if this build carries no shortlist. */
+function keyLabel() {
+  return state.priority?.label || 'الأكثر تكرارًا';
+}
+
 function parseRange(value) {
   const match = /^(\d+)-(\d+)$/.exec(value || '');
   if (!match) return null;
@@ -321,18 +358,25 @@ function readStateFromUrl() {
   state.status = params.get('status') ?? DEFAULTS.status;
   state.sort = params.get('sort') ?? DEFAULTS.sort;
 
+  // `?key=1` is the shareable link to the shortlist; anything else is "all".
+  state.key = params.get('key') === '1' ? 'only' : 'all';
+
   if (!['all', 'todo', 'done', 'fav'].includes(state.status)) state.status = 'all';
-  if (!['number-asc', 'number-desc', 'title', 'recent'].includes(state.sort)) {
+  if (!['number-asc', 'number-desc', 'title', 'recent', 'key'].includes(state.sort)) {
     state.sort = 'number-asc';
   }
+  // Sorting the shortlist first is meaningless in a build that has none.
+  if (state.sort === 'key' && !state.priority) state.sort = DEFAULTS.sort;
+  if (state.key === 'only' && !state.priority) state.key = 'all';
   if (state.range !== 'all' && !parseRange(state.range)) state.range = 'all';
 }
 
 const syncUrl = debounce(() => {
   const params = new URLSearchParams();
-  for (const key of ['q', 'range', 'status', 'sort']) {
-    if (state[key] && state[key] !== DEFAULTS[key]) params.set(key, state[key]);
+  for (const name of ['q', 'range', 'status', 'sort']) {
+    if (state[name] && state[name] !== DEFAULTS[name]) params.set(name, state[name]);
   }
+  if (state.key === 'only') params.set('key', '1');
   const search = params.toString();
   const next = `${location.pathname}${search ? `?${search}` : ''}`;
   history.replaceState(null, '', next);
@@ -357,10 +401,17 @@ function sheetFilterCount() {
   return n;
 }
 
-function rangePool() {
-  const all = state.ordered;
+/**
+ * Everything the current range and shortlist switch allow, before status and
+ * search narrow it further. Both are independent axes, so the status tab
+ * counts are always counts of what selecting that tab would really show.
+ */
+function activePool() {
+  let pool = state.ordered;
   const range = parseRange(state.range);
-  return range ? all.filter((e) => e.n >= range.from && e.n <= range.to) : all;
+  if (range) pool = pool.filter((e) => e.n >= range.from && e.n <= range.to);
+  if (state.key === 'only') pool = pool.filter(isKey);
+  return pool;
 }
 
 function searchWithin(pool, status) {
@@ -369,14 +420,14 @@ function searchWithin(pool, status) {
 }
 
 /** Recount every status tab exactly as selecting it would filter. */
-function countStatuses(pool = rangePool()) {
+function countStatuses(pool = activePool()) {
   for (const status of Object.keys(STATUS_FILTERS)) {
     state.counts[status] = searchWithin(pool, status).results.length;
   }
 }
 
 function compute() {
-  const pool = rangePool();
+  const pool = activePool();
   state.query = parseQuery(state.q);
 
   const { results, fuzzy } = searchWithin(pool, state.status);
@@ -392,6 +443,10 @@ function compute() {
     else if (state.sort === 'title') sorted.sort((a, b) => a.t.localeCompare(b.t, 'ar'));
     else if (state.sort === 'recent') {
       sorted.sort((a, b) => store.openedAt(b.n) - store.openedAt(a.n) || a.n - b.n);
+    } else if (state.sort === 'key') {
+      // Shortlist first, still ascending within each group: a way to see the
+      // priority forms at the top without hiding the rest.
+      sorted.sort((a, b) => Number(isKey(b)) - Number(isKey(a)) || a.n - b.n);
     } else sorted.sort((a, b) => a.n - b.n);
     state.results = sorted;
   } else {
@@ -469,6 +524,21 @@ function paintCardState(node) {
   }
 }
 
+/** The shortlist badge and edge. Fixed per record, so it is painted once. */
+function paintCardKey(node, exam) {
+  const key = isKey(exam);
+  node.classList.toggle('card--key', key);
+
+  const badge = $('[data-meta="key"]', node);
+  if (!badge) return;
+  if (!key) {
+    badge.remove(); // most cards: one fewer node to carry through the grid
+    return;
+  }
+  badge.hidden = false;
+  $('[data-field="key"]', badge).textContent = keyLabel();
+}
+
 function buildCard(exam) {
   const node = el.template.content.firstElementChild.cloneNode(true);
   const url = examUrl(exam);
@@ -502,6 +572,7 @@ function buildCard(exam) {
   copy.setAttribute('aria-label', `نسخ رابط النموذج ${arabicNumber(exam.n)}`);
   copy.title = 'نسخ رابط النموذج';
 
+  paintCardKey(node, exam);
   paintCardState(node);
   return node;
 }
@@ -568,6 +639,7 @@ function renderActiveFilters() {
     const r = parseRange(state.range);
     tags.push({ key: 'range', label: 'النماذج', range: r });
   }
+  if (state.key === 'only') tags.push({ key: 'key', label: keyLabel() });
   if (state.status !== 'all') {
     const labels = { todo: 'لم تُنجز بعد', done: 'المُنجزة', fav: 'المفضلة' };
     tags.push({ key: 'status', label: labels[state.status] });
@@ -577,6 +649,7 @@ function renderActiveFilters() {
       'number-desc': 'الترتيب: من الأحدث رقمًا',
       title: 'الترتيب: أبجديًا',
       recent: 'الترتيب: آخر ما فُتح',
+      key: `الترتيب: ${keyLabel()} أولًا`,
     };
     tags.push({ key: 'sort', label: labels[state.sort] });
   }
@@ -639,9 +712,23 @@ function renderEmptyState() {
   if (hasResults) return;
 
   const term = state.q.trim();
-  const listOnly = !term && state.range === 'all' && STATUS_EMPTY[state.status];
+  const keyOnly = state.key === 'only';
+  const listOnly = !term && !keyOnly && state.range === 'all' && STATUS_EMPTY[state.status];
 
-  const copy = listOnly || {
+  // The shortlist is spread unevenly across the numbering — some ranges hold
+  // none of it at all — so an empty result under it is an ordinary outcome,
+  // not a dead end. Name the switch responsible and offer to release it.
+  const keyEmpty = !term &&
+    keyOnly && {
+      icon: 'i-target',
+      title: `لا توجد نماذج من ${keyLabel()} هنا`,
+      lead:
+        state.range !== 'all'
+          ? `لا يضم هذا النطاق أي نموذج من ${keyLabel()}. جرّب نطاقًا آخر، أو اعرض كل النماذج.`
+          : `لا يوجد نموذج من ${keyLabel()} ضمن عوامل التصفية الحالية.`,
+    };
+
+  const copy = keyEmpty || listOnly || {
     icon: 'i-inbox',
     title: 'لا توجد نتائج',
     lead: term ? 'لم نجد نموذجًا مطابقًا لـ' : 'لا توجد نماذج ضمن عوامل التصفية الحالية.',
@@ -654,6 +741,19 @@ function renderEmptyState() {
 
   // Suggest the closest numbers so a mistyped number is still one click away.
   el.suggestions.replaceChildren();
+
+  if (keyEmpty) {
+    const release = document.createElement('button');
+    release.type = 'button';
+    release.className = 'chip';
+    release.textContent = 'اعرض كل النماذج';
+    release.addEventListener('click', () => {
+      state.key = 'all';
+      applyChange();
+    });
+    el.suggestions.append(release);
+  }
+
   const digits = state.query.digits;
   if (digits && state.data) {
     const target = Number(digits);
@@ -684,10 +784,64 @@ function renderEmptyState() {
   }
 }
 
+/**
+ * Quick-jump chips. Their counts are recomputed rather than read from the
+ * dataset's own totals, because the shortlist switch changes what each range
+ * actually holds — and because boot() drops any record with an unusable link,
+ * which a pre-built total would not know about.
+ */
 function renderChips() {
+  const keyOnly = state.key === 'only';
+  const allLabel = $('.chip__label', el.rangeChips);
+  if (allLabel) allLabel.textContent = keyOnly ? 'كل الأرقام' : 'كل النماذج';
+
   $$('[data-range]', el.rangeChips).forEach((chip) => {
     chip.setAttribute('aria-pressed', String(chip.dataset.range === state.range));
+
+    const badge = $('.chip__count', chip);
+    if (!badge) return;
+
+    const range = parseRange(chip.dataset.range);
+    const within = range
+      ? state.ordered.filter((e) => e.n >= range.from && e.n <= range.to)
+      : state.ordered;
+    const count = keyOnly ? within.filter(isKey).length : within.length;
+
+    badge.textContent = arabicNumber(count);
+    chip.classList.toggle('chip--empty', count === 0);
+    if (range) {
+      chip.setAttribute(
+        'aria-label',
+        `النماذج من ${arabicNumber(range.from)} إلى ${arabicNumber(range.to)} (${countPhrase(
+          count,
+          'exam',
+        )})`,
+      );
+    }
   });
+}
+
+/** The shortlist toggle, in the toolbar and on its quick-access tile. */
+function renderKeyControls() {
+  if (!state.priority) return;
+  const on = state.key === 'only';
+  const label = keyLabel();
+
+  el.keyToggle.setAttribute('aria-pressed', String(on));
+  el.keyToggle.setAttribute(
+    'aria-label',
+    on ? `إلغاء تصفية ${label} وعرض كل النماذج` : `اعرض ${label} وحدها`,
+  );
+
+  el.tileKey.setAttribute('aria-pressed', String(on));
+  el.tileKeyState.textContent = on ? 'معروضة الآن' : 'اعرضها';
+
+  // The tile above carries the blurb; repeating it here would print the same
+  // sentence twice on one screen. This line explains the control instead, and
+  // has to read correctly whichever way the switch is currently set.
+  el.keyHint.textContent = on
+    ? 'معروضة وحدها الآن — اضغط المفتاح للرجوع إلى كل النماذج.'
+    : 'اضغط لعرضها وحدها — يعمل مع البحث والحالة والمجموعات معًا.';
 }
 
 function renderStatusCounts() {
@@ -699,6 +853,7 @@ function renderStatusCounts() {
 
 function renderControls() {
   el.sortSelect.value = state.sort;
+  renderKeyControls();
   $$('[data-status]', el.statusGroup).forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.status === state.status));
   });
@@ -742,12 +897,42 @@ function scrollToResults() {
 function progressStats() {
   let done = 0;
   let fav = 0;
+  let keyTotal = 0;
+  let keyDone = 0;
   for (const exam of state.ordered) {
-    if (store.isDone(exam.n)) done += 1;
+    const key = isKey(exam);
+    if (key) keyTotal += 1;
+    if (store.isDone(exam.n)) {
+      done += 1;
+      if (key) keyDone += 1;
+    }
     if (store.isFav(exam.n)) fav += 1;
   }
   const total = state.ordered.length;
-  return { total, done, fav, todo: total - done };
+  return {
+    total,
+    done,
+    fav,
+    todo: total - done,
+    keyTotal,
+    keyDone,
+    keyTodo: keyTotal - keyDone,
+  };
+}
+
+/** Fill, label and ARIA for one progress track. */
+function paintTrack({ bar, fill, pct }, done, total) {
+  const share = total ? (done / total) * 100 : 0;
+  const text = percentText(done, total);
+  // A tiny share of a wide track renders as nothing at all; keep a visible
+  // sliver so "some progress" never looks like "no progress".
+  fill.style.width = share > 0 ? `max(${share.toFixed(2)}%, 8px)` : '0';
+  pct.textContent = text;
+  bar.setAttribute('aria-valuenow', share.toFixed(1));
+  bar.setAttribute(
+    'aria-valuetext',
+    `${arabicNumber(done)} من ${arabicNumber(total)} (${text})`,
+  );
 }
 
 /**
@@ -803,21 +988,29 @@ function refreshQuickAccess() {
 
   if (store.isAvailable) {
     el.progress.hidden = stats.done === 0;
-    const pct = stats.total ? (stats.done / stats.total) * 100 : 0;
-    const pctText = percentText(stats.done, stats.total);
-    // A tiny share of a wide track renders as nothing at all; keep a visible
-    // sliver so "some progress" never looks like "no progress".
-    el.progressFill.style.width = pct > 0 ? `max(${pct.toFixed(2)}%, 8px)` : '0';
     el.progressLabel.textContent = `أنجزتَ ${arabicNumber(stats.done)} من ${countPhrase(
       stats.total,
       'exam',
     )}`;
-    el.progressPct.textContent = pctText;
-    el.progressBar.setAttribute('aria-valuenow', pct.toFixed(1));
-    el.progressBar.setAttribute(
-      'aria-valuetext',
-      `${arabicNumber(stats.done)} من ${arabicNumber(stats.total)} (${pctText})`,
+    paintTrack(
+      { bar: el.progressBar, fill: el.progressFill, pct: el.progressPct },
+      stats.done,
+      stats.total,
     );
+
+    // The second track answers the question the shortlist raises: how much of
+    // the part that matters most is already behind you?
+    el.progressKeyTrack.hidden = stats.keyTotal === 0;
+    if (stats.keyTotal) {
+      el.progressKeyName.textContent = `${keyLabel()} — ${arabicNumber(
+        stats.keyDone,
+      )} من ${arabicNumber(stats.keyTotal)}`;
+      paintTrack(
+        { bar: el.progressKeyBar, fill: el.progressKeyFill, pct: el.progressKeyPct },
+        stats.keyDone,
+        stats.keyTotal,
+      );
+    }
   } else {
     el.progress.hidden = true;
   }
@@ -846,6 +1039,16 @@ function refreshQuickAccess() {
   el.tileRandomMeta.textContent =
     stats.done > 0 && stats.todo > 0 ? 'من النماذج التي لم تُنجزها' : 'يفتح فورًا في تبويب جديد';
   pointTileAt(el.tileRandom, randomTarget(), 'نموذج عشوائي');
+
+  if (stats.keyTotal) {
+    // Before any progress, say what the set is; after some, say what is left.
+    el.tileKeyMeta.textContent =
+      stats.keyDone === 0
+        ? state.priority?.blurb || `${countPhrase(stats.keyTotal, 'exam')} ابدأ بها`
+        : stats.keyTodo === 0
+          ? `أنجزتها كلها — ${countPhrase(stats.keyTotal, 'exam')}`
+          : `بقي لك ${countPhrase(stats.keyTodo, 'exam')} من ${arabicNumber(stats.keyTotal)}`;
+  }
 }
 
 /** Counters, tiles and tabs — everything except the list itself. */
@@ -1048,6 +1251,21 @@ function bindEvents() {
     if (el.sheet.hidden) keepResultsInView();
   });
 
+  // The toggle in the toolbar and the tile at the top of the page drive the
+  // same switch; only the tile scrolls the list into view, because it is the
+  // one the student pressed from somewhere else on the page.
+  const toggleKey = ({ scroll = false } = {}) => {
+    state.key = state.key === 'only' ? 'all' : 'only';
+    applyChange({ scroll });
+  };
+
+  el.keyToggle.addEventListener('click', () => {
+    toggleKey();
+    if (el.sheet.hidden) keepResultsInView();
+  });
+
+  el.tileKey.addEventListener('click', () => toggleKey({ scroll: true }));
+
   // One delegated listener for every card, however many batches are loaded.
   el.grid.addEventListener('click', (event) => {
     const node = event.target.closest('.card');
@@ -1230,10 +1448,40 @@ function resetAll() {
 /* Boot                                                                        */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Everything the shortlist adds to the page, set up once from the dataset.
+ * A build without a shortlist leaves all of it hidden — the switch, the tile,
+ * the sort option and the second progress track — rather than showing an
+ * empty promise.
+ */
+function renderPriorityMeta(priority) {
+  state.priority = priority || null;
+  if (!state.priority) return;
+
+  const label = keyLabel();
+  const count = arabicNumber(state.priority.count);
+
+  el.statPriority.forEach((n) => (n.textContent = count));
+  document.querySelectorAll('[data-unit="priority"]').forEach((n) => {
+    n.textContent = label;
+  });
+
+  el.keyToggleLabel.textContent = label;
+  el.keyToggleCount.textContent = count;
+  el.keyBar.hidden = false;
+
+  el.tileKeyLabel.textContent = label;
+  el.tileKey.hidden = false;
+
+  el.sortKeyOption.textContent = `${label} أولًا`;
+  el.sortKeyOption.hidden = false;
+}
+
 function renderMeta(meta) {
   const fmt = (n) => (typeof n === 'number' ? arabicNumber(n) : '—');
   el.statTotal.forEach((n) => (n.textContent = fmt(meta.total)));
   el.statQuestions.forEach((n) => (n.textContent = fmt(meta.totalQuestions)));
+  renderPriorityMeta(meta.priority);
 
   // Unit labels must agree with the number they sit beside.
   document.querySelectorAll('[data-unit="exam"]').forEach((n) => {
@@ -1256,7 +1504,12 @@ function renderMeta(meta) {
   allChip.type = 'button';
   allChip.className = 'chip';
   allChip.dataset.range = 'all';
-  allChip.append(Object.assign(document.createElement('span'), { textContent: 'كل النماذج' }));
+  allChip.append(
+    Object.assign(document.createElement('span'), {
+      className: 'chip__label',
+      textContent: 'كل النماذج',
+    }),
+  );
   allChip.append(
     Object.assign(document.createElement('span'), {
       className: 'chip__count',
@@ -1303,6 +1556,7 @@ function showError() {
   document.querySelector('.toolbar__controls')?.setAttribute('hidden', '');
   el.sheetOpen?.setAttribute('hidden', '');
   document.querySelector('.ranges')?.setAttribute('hidden', '');
+  el.keyBar?.setAttribute('hidden', '');
   el.count.textContent = '';
 }
 
@@ -1326,6 +1580,13 @@ async function boot() {
 
     data.meta = data.meta || {};
     data.meta.total = data.exams.length;
+
+    // Records were just dropped for unusable links; the shortlist count has to
+    // follow, or the page would advertise forms it cannot open.
+    if (data.meta.priority) {
+      const flagged = data.exams.filter((e) => e.p).length;
+      data.meta.priority = flagged ? { ...data.meta.priority, count: flagged } : null;
+    }
 
     state.data = data;
     state.ordered = data.exams.slice().sort((a, b) => a.n - b.n);

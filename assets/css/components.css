@@ -462,7 +462,7 @@
 .seal__caption {
   position: absolute;
   inset-block-end: 0;
-  inset-inline: 0;
+  inset-inline: -100%;
   margin-inline: auto;
   width: max-content;
   display: inline-flex;
@@ -627,9 +627,18 @@ kbd {
 
 .hero__stats {
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  /* Four figures: two per row on a phone, one row from the tablet up. */
+  grid-template-columns: repeat(2, auto);
   justify-content: center;
+  row-gap: var(--sp-3);
   margin-block-start: var(--sp-6);
+}
+
+@media (min-width: 620px) {
+  .hero__stats {
+    grid-template-columns: repeat(4, auto);
+    row-gap: 0;
+  }
 }
 
 .hero__stats li {
@@ -644,6 +653,19 @@ kbd {
 
 .hero__stats li + li {
   border-inline-start: 1px solid var(--border-strong);
+}
+
+/* While the figures sit two per row, the one that opens a row must not carry
+   a divider — it would hang off the left edge with nothing beside it. */
+@media (max-width: 619px) {
+  .hero__stats li:nth-child(odd) {
+    border-inline-start: 0;
+  }
+}
+
+/* The shortlist is the figure worth reading twice. */
+.hero__stats-key b {
+  color: var(--accent-tint-ink);
 }
 
 .hero__stats b {
@@ -762,6 +784,73 @@ kbd {
   color: var(--gold-ink);
 }
 
+/* ---- The shortlist tile ----------------------------------------------------
+   The "most repeated" set is the site's headline path, so it takes a row of
+   its own above the four utility tiles rather than becoming a lopsided fifth
+   column. It is a filter, not a link: pressed state mirrors the toggle in the
+   toolbar, and the two stay in sync.
+   -------------------------------------------------------------------------- */
+
+.tile--key {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, var(--accent-soft), transparent 65%), var(--surface);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.tile--key[hidden] {
+  display: none;
+}
+
+.tile--key .tile__icon {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-tint-ink);
+}
+
+.tile--key .tile__label {
+  color: var(--accent-tint-ink);
+}
+
+/* The explanation is the point of this tile; let it wrap instead of clipping. */
+.tile--key .tile__meta {
+  white-space: normal;
+}
+
+.tile--key[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-accent), var(--shadow-2);
+}
+
+.tile--key[aria-pressed="true"] .tile__label,
+.tile--key[aria-pressed="true"] .tile__meta {
+  color: var(--accent-ink);
+}
+
+.tile--key[aria-pressed="true"] .tile__icon {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--accent-ink);
+}
+
+/* "اعرضها" / "معروضة الآن" — says what the press will do, then what it did. */
+.tile__state {
+  flex: none;
+  margin-inline-start: auto;
+  padding: 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: var(--r-full);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent-tint-ink);
+  white-space: nowrap;
+}
+
+.tile--key[aria-pressed="true"] .tile__state {
+  background: var(--accent-ink);
+  border-color: transparent;
+  color: var(--accent);
+}
+
 .tile__body {
   min-width: 0;
 }
@@ -816,12 +905,33 @@ a.tile:not([href]) {
 .progress {
   display: flex;
   align-items: center;
-  gap: var(--sp-4);
+  flex-wrap: wrap;
+  gap: var(--sp-3) var(--sp-4);
   margin-block-start: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
   background: var(--surface-2);
   border: 1px dashed var(--border-strong);
   border-radius: var(--r-lg);
+}
+
+/* Two tracks — everything, then the shortlist. They share one grid so the
+   bars line up under each other however long the two labels turn out to be;
+   `display: contents` lets each track hand its three parts to that grid. */
+.progress__tracks {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(60px, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.progress__track {
+  display: contents;
+}
+
+.progress__track[hidden] {
+  display: none;
 }
 
 .progress__bar {
@@ -845,19 +955,34 @@ a.tile:not([href]) {
 }
 
 .progress__label {
-  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--ink-2);
 }
 
 .progress__pct {
-  flex: none;
   min-width: 3.5ch;
   font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--gold-ink);
   text-align: center;
+}
+
+/* The shortlist track is the accent, matching its badge and its toggle; the
+   gold on the track above keeps meaning "done". */
+.progress__fill--key {
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+}
+
+.progress__track--key .progress__label {
+  color: var(--accent-tint-ink);
+}
+
+.progress__pct--key {
+  color: var(--accent-tint-ink);
 }
 
 .progress__reset {
@@ -1067,6 +1192,84 @@ a.tile:not([href]) {
   font-variant-numeric: tabular-nums;
 }
 
+/* A range that holds none of the shortlist stays clickable but reads as empty,
+   so "0" looks deliberate rather than broken. */
+.chip--empty {
+  opacity: 0.45;
+}
+
+.chip--empty[aria-pressed="true"] {
+  opacity: 1;
+}
+
+/* ---- The shortlist toggle ---------------------------------------------------
+   An axis of its own, not a status: it combines with the status tabs, the
+   range chips and the search box. It sits outside the mobile filter sheet on
+   purpose — it is the one filter worth a tap from the top of the list.
+   -------------------------------------------------------------------------- */
+
+.keybar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  margin-block-end: var(--sp-3);
+}
+
+.keybar[hidden] {
+  display: none;
+}
+
+.keybar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 38px;
+  padding: 0 var(--sp-4);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: var(--r-full);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--accent-tint-ink);
+  white-space: nowrap;
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.keybar__toggle:hover {
+  border-color: var(--accent);
+}
+
+.keybar__toggle[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-accent);
+}
+
+.keybar__count {
+  padding: 1px 8px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.keybar__toggle[aria-pressed="true"] .keybar__count {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--accent-ink);
+}
+
+.keybar__hint {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
 /* ---- Active filter summary -------------------------------------------------- */
 
 .active-filters {
@@ -1170,6 +1373,19 @@ a.tile:not([href]) {
   transform: scaleY(1);
 }
 
+/* A card on the shortlist keeps that edge lit all the time, in the accent
+   rather than the gold — gold already means "done", and a card can be both.
+   When it is, done takes the colour: that is the state the student just
+   changed, and the badge below still says which set the card belongs to. */
+.card--key::before {
+  background: var(--accent);
+  transform: scaleY(1);
+}
+
+.card--key.card--done::before {
+  background: var(--gold);
+}
+
 .card--done {
   border-color: color-mix(in srgb, var(--gold) 42%, var(--border));
   background: linear-gradient(var(--gold-soft), var(--gold-soft)) padding-box, var(--surface);
@@ -1262,6 +1478,25 @@ a.tile:not([href]) {
 
 .card__status[hidden] {
   display: none;
+}
+
+/* Leads the meta row: a filled pill among plain grey text, so it is picked up
+   while scanning the grid without adding a line to every card. */
+.card__key {
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  font-weight: 600;
+  color: var(--accent-tint-ink);
+  background: var(--accent-soft);
+}
+
+.card__key[hidden] {
+  display: none;
+}
+
+.card__key .icon {
+  width: 13px;
+  height: 13px;
 }
 
 .card__status--done {
@@ -2000,9 +2235,11 @@ a.tile:not([href]) {
 
 /* --------------------------------------------------------------------------
    Quick access on phones
-   Four full-width tiles pushed the exam list far below the fold. Instead the
-   "resume" tile — the one whose metadata actually matters — keeps a full row,
-   and the other three collapse to a compact icon-over-label row.
+   Full-width tiles pushed the exam list far below the fold. The two tiles
+   whose wording carries information — the shortlist and "resume" — keep a row
+   each, and the other three collapse to a compact icon-over-label row.
+   Selected by class, not by position: the shortlist tile was added ahead of
+   the others, and :first-child would have demoted the wrong one.
    -------------------------------------------------------------------------- */
 
 @media (max-width: 559px) {
@@ -2011,11 +2248,11 @@ a.tile:not([href]) {
     gap: var(--sp-2);
   }
 
-  .quick__grid > .tile:first-child {
+  .quick__grid > .tile--accent {
     grid-column: 1 / -1;
   }
 
-  .quick__grid > .tile:not(:first-child) {
+  .quick__grid > .tile:not(.tile--accent):not(.tile--key) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -2025,34 +2262,59 @@ a.tile:not([href]) {
     text-align: center;
   }
 
-  .quick__grid > .tile:not(:first-child) .tile__icon {
+  .quick__grid > .tile:not(.tile--accent):not(.tile--key) .tile__icon {
     width: 32px;
     height: 32px;
   }
 
-  .quick__grid > .tile:not(:first-child) .tile__go {
+  .quick__grid > .tile:not(.tile--accent):not(.tile--key) .tile__go {
     display: none;
   }
 
-  .quick__grid > .tile:not(:first-child) .tile__label {
+  .quick__grid > .tile:not(.tile--accent):not(.tile--key) .tile__label {
     font-size: var(--fs-xs);
     line-height: 1.3;
     white-space: normal;
   }
 
   /* The count/description is available on the destination screen anyway. */
-  .quick__grid > .tile:not(:first-child) .tile__meta {
+  .quick__grid > .tile:not(.tile--accent):not(.tile--key) .tile__meta {
     display: none;
   }
 
+  /* On a phone the shortlist blurb is squeezed between the icon and the state
+     pill and runs to four lines, pushing the list off the screen. Drop the
+     pill — the filled surface already says the filter is on, and aria-pressed
+     still carries it to a screen reader — and hold the blurb to two lines. */
+  .tile--key .tile__state {
+    display: none;
+  }
+
+  .tile--key .tile__meta {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   .progress {
-    flex-wrap: wrap;
     gap: var(--sp-2) var(--sp-3);
   }
 
+  /* Too narrow for label / bar / percent side by side: give each track two
+     rows, the label spanning the full width above its own bar. */
+  .progress__tracks {
+    grid-template-columns: minmax(60px, 1fr) auto;
+    gap: var(--sp-1) var(--sp-3);
+  }
+
   .progress__label {
-    order: -1;
-    width: 100%;
+    grid-column: 1 / -1;
+  }
+
+  .progress__track + .progress__track .progress__label {
+    margin-block-start: var(--sp-2);
   }
 }
 
@@ -2362,20 +2624,6 @@ a.tile:not([href]) {
   overflow: hidden;
 }
 
-/* A drawn mark rather than a quotation mark: this panel states his approach,
-   it does not quote him. */
-.quote::before {
-  content: "";
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
-  width: 128px;
-  height: 128px;
-  background: radial-gradient(circle at 100% 0, var(--gold), transparent 70%);
-  opacity: 0.22;
-  pointer-events: none;
-}
-
 .quote__text {
   position: relative;
   font-size: var(--fs-2xl);
@@ -2447,6 +2695,7 @@ a.tile:not([href]) {
    a full semicircle at any width (radius larger than half the box). */
 .portrait {
   position: relative;
+  min-width: 0;
   margin: 0;
   padding-block-end: var(--sp-5);
 }
@@ -2511,7 +2760,7 @@ a.tile:not([href]) {
 .portrait__caption {
   position: absolute;
   inset-block-end: 0;
-  inset-inline: 0;
+  inset-inline: -100%;
   z-index: 3;
   margin-inline: auto;
   width: max-content;

@@ -101,6 +101,53 @@ The source schema currently in use:
 `build-data.mjs` tolerates a bare array of forms too, and keeps any URL that is valid
 https even if it is not a Google Forms link.
 
+### Updating «الأكثر تكرارًا» (the most-repeated shortlist)
+
+The sections the teacher marks as recurring most often in the real exam live in their
+own file, **`data/source/priority.json`** — separate from the forms export, because the
+export is a machine dump that gets replaced wholesale while this list is his editorial
+judgement and is revised on its own schedule.
+
+```json
+{
+  "label": "الأكثر تكرارًا",
+  "blurb": "…shown on the quick-access tile…",
+  "updated": "YYYY-MM-DD",
+  "sections": [1, 2, 3, 5, 8]
+}
+```
+
+Edit `sections` (and bump `updated`), then:
+
+```bash
+npm run build:data
+```
+
+That is the whole procedure — **no code change is involved.** The build stamps `p: 1`
+on each matching record, writes `meta.priority` into `assets/data/exams.json`, restates
+the figure in the hero, `llms.txt` and the structured data, and reports in
+`data/build-report.json`:
+
+- `priority.flagged` — how many were actually matched,
+- `priority.unknown` — numbers on the list that no published form answers to. These are
+  dropped rather than failing the build, and are printed during the build so a typo in
+  the shortlist is visible immediately.
+
+What the site does with the flag:
+
+| Where | What appears |
+| --- | --- |
+| Hero | a fourth figure, «140 الأكثر تكرارًا» |
+| Quick access | a full-width tile that switches the filter on |
+| Toolbar | a toggle above the range chips, combinable with search, status and range |
+| Card | an accent pill in the meta row and a persistent accent edge |
+| Progress | a second track counting the shortlist on its own |
+| Sort | «الأكثر تكرارًا أولًا» |
+| URL | `?key=1` — a shareable link straight to the shortlist |
+
+Deleting `priority.json` is a supported state: `meta.priority` becomes `null` and every
+one of those affordances hides itself rather than showing an empty promise.
+
 ### Checking that the forms are still live
 
 ```bash
@@ -275,7 +322,22 @@ comes second. Ask the owner whether those accounts are his.
 | FAQ written in the words Saudi students use («هل يقدّم دورات قدرات أون لاين؟»، «كيف أتواصل مع مدرب القدرات؟»), markup identical to the visible text | `teacher.html`, `about.html` |
 | `llms.txt` rewritten teacher-first, figures generated from the dataset, facts only — no instructions telling assistants to recommend him | `tools/build-data.mjs` |
 | `sitemap.xml` generated on every build, so `<lastmod>` tracks the dataset; his portrait is declared as an image of the pages it appears on, which is how a static site gets into Google Images for «أحمد طلعت قدرات» | `tools/build-data.mjs` |
-| Guard rails: `npm test` fails on unsupported claims («أفضل»، «ضمان»، «معتمد من قياس»، «دروس خصوصية»), on a missing contact link, on FAQ markup drifting from the page, and on a stale `llms.txt` | `tools/test-seo.mjs` |
+| Every page's JSON-LD resolves on its own: a page that only *references* the Person or the WebSite carries a stub of it, because Google parses structured data one page at a time and an unresolved `@id` is a blank node | all pages |
+| `jobTitle` names only the two posts he holds. «خبير القدرات في اختبارات مركز قياس الوطني» stays in `description`, in `knowsAbout` and on the visible credential card — `jobTitle` is a machine-readable employment field, and قياس is a government body | JSON-LD |
+| A visible note under the credentials: قياس is the national assessment centre, he is an expert in its tests and is not affiliated with or endorsed by it. `llms.txt` says the same in Arabic and English | `teacher.html`, `llms.txt` |
+| Guard rails: `npm test` fails on unsupported claims (now patterns, not phrases: «أفضل»/"best", guarantees, «معتمد من قياس», years of experience, student counts, prices), on an `@id` that does not resolve on its page, on a stub that disagrees with the full entity, on an `<img>` with no width/height, on a `target="_blank"` without `rel="noopener noreferrer"`, on a missing contact link, on FAQ markup drifting from the page, and on a stale `llms.txt` | `tools/test-seo.mjs` |
+
+**Two Arabic points worth keeping straight**
+
+301 is a compound of المائة, so its تمييز is singular: «301 نموذج», never «301 نموذجًا»
+(that is the 11–99 form). 13 and 3913 are the other case — «13 سؤالًا», «3913 سؤالًا» —
+and `unitNoun()` in `tools/build-data.mjs` gets both right from
+`Intl.PluralRules('ar')`, so generated text should use it rather than a hard-coded word.
+And «دورات» is a broken plural: «دورات حضورية», not «دورات حضوري».
+
+Nothing on the site says the forms open with no further steps. Every form asks for a
+password on its first page, so the home hero, the FAQ and `about.html` all say so and
+point the student at him — which is where the password actually comes from.
 
 Two things were deliberately dropped: `geo.region` (Google ignores it) and review
 or rating markup (self-serving reviews are not eligible, and the owner supplied

@@ -67,10 +67,12 @@ for (const page of PAGES) {
 
   const faq = graph.find((node) => node['@type'] === 'FAQPage');
   if (faq) {
-    const text = visibleText(html);
-    const missing = faq.mainEntity.filter(
-      (q) => !text.includes(q.name) || !text.includes(q.acceptedAnswer.text.replace(/\s+/g, ' ')),
-    );
+    // Compared without whitespace: inline tags (<bdi> around the phone number,
+    // <span> around a figure) split the text without changing what a reader or
+    // a crawler sees.
+    const text = visibleText(html).replace(/\s+/g, '');
+    const has = (value) => text.includes(value.replace(/\s+/g, ''));
+    const missing = faq.mainEntity.filter((q) => !has(q.name) || !has(q.acceptedAnswer.text));
     assert(
       `FAQ markup matches visible text (${faq.mainEntity.length} Q&A)`,
       missing.length === 0,

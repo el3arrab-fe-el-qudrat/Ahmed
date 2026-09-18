@@ -89,6 +89,15 @@
   --seal-shadow: 0 30px 60px -30px rgba(24, 34, 52, 0.42), 0 10px 22px -14px rgba(122, 34, 41, 0.24);
   --highlight: rgba(201, 161, 111, 0.32);
 
+  /* WhatsApp: the one place a non-brand colour is used, because students
+     recognise the green instantly. #0f7a45 keeps white text at 5.4:1. */
+  --wa: #0f7a45;
+  --wa-hover: #0b6b3d;
+  --wa-icon: #0f7a45;
+
+  /* The navy stage behind the teacher's cut-out portrait (both themes). */
+  --stage: radial-gradient(120% 85% at 50% 18%, #2c3d61 0%, #182234 55%, #0e1524 100%);
+
   /* ---- Typography ------------------------------------------------------- */
   --font-sans: "IBM Plex Sans Arabic", "Segoe UI", "Noto Sans Arabic", system-ui, -apple-system,
     "Helvetica Neue", Arial, sans-serif;
@@ -192,6 +201,7 @@
   --seal-line: rgba(221, 180, 120, 0.35);
   --seal-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(221, 180, 120, 0.12);
   --highlight: rgba(221, 180, 120, 0.24);
+  --wa-icon: #25d366;
 
   color-scheme: dark;
 }

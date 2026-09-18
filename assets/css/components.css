@@ -2407,3 +2407,238 @@ a.tile:not([href]) {
 .panel__actions {
   margin-block-start: var(--sp-5);
 }
+
+/* --------------------------------------------------------------------------
+   The teacher's photos
+   -------------------------------------------------------------------------- */
+
+/* Brand-glyph icons (WhatsApp, Facebook) are filled, not stroked. */
+.icon--fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Circle portrait inside the existing .seal frame. */
+.seal__img--photo {
+  object-fit: cover;
+}
+
+/* The brand mark, pinned to the portrait's rim. */
+.seal__badge {
+  position: absolute;
+  z-index: 1;
+  inset-block-end: 9%;
+  inset-inline-end: -3%;
+  width: 24%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--seal-line), var(--shadow-2);
+}
+
+/* Arch: the full-length cut-out standing on a navy stage. The rounded top is
+   a full semicircle at any width (radius larger than half the box). */
+.portrait {
+  position: relative;
+  margin: 0;
+  padding-block-end: var(--sp-5);
+}
+
+.arch {
+  position: relative;
+  width: min(100%, var(--arch-w, 340px));
+  aspect-ratio: 4 / 5;
+  margin-inline: auto;
+  border-radius: 999px 999px var(--r-xl) var(--r-xl);
+  background: var(--stage);
+  box-shadow: var(--seal-shadow);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Gold hairline just inside the arch edge. */
+.arch::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  z-index: 2;
+  border: 1px solid rgba(221, 180, 120, 0.45);
+  border-radius: 999px 999px calc(var(--r-xl) - 6px) calc(var(--r-xl) - 6px);
+  pointer-events: none;
+}
+
+/* A soft light behind the head so the dark suit separates from the stage. */
+.arch::before {
+  content: "";
+  position: absolute;
+  inset: 8% 18% auto;
+  z-index: 0;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(221, 180, 120, 0.28), transparent);
+}
+
+.arch__img {
+  position: absolute;
+  z-index: 1;
+  inset-inline: 0;
+  inset-block-end: 0;
+  width: 100%;
+  height: auto;
+}
+
+/* Dashed orbit, echoing the seal. */
+.portrait__orbit {
+  position: absolute;
+  inset: -14px;
+  inset-block-end: calc(var(--sp-5) - 14px);
+  width: calc(min(100%, var(--arch-w, 340px)) + 28px);
+  margin-inline: auto;
+  border: 1.5px dashed var(--seal-line);
+  border-radius: 999px 999px calc(var(--r-xl) + 14px) calc(var(--r-xl) + 14px);
+  pointer-events: none;
+}
+
+.portrait__caption {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 50%;
+  z-index: 3;
+  translate: 50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  box-shadow: var(--shadow-2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.portrait__caption span {
+  font-weight: 500;
+  color: var(--gold-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Contact
+   -------------------------------------------------------------------------- */
+
+.btn--whatsapp {
+  background: var(--wa);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 20px -12px rgba(15, 122, 69, 0.7);
+}
+
+.btn--whatsapp:hover {
+  background: var(--wa-hover);
+}
+
+.btn--whatsapp .icon {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.icon-btn--whatsapp {
+  color: var(--wa-icon);
+}
+
+.contact-card {
+  display: grid;
+  gap: var(--sp-5) var(--sp-8);
+  align-items: center;
+  padding: clamp(var(--sp-5), 4vw, var(--sp-10));
+  background: linear-gradient(150deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-2);
+  text-align: center;
+  justify-items: center;
+}
+
+@media (min-width: 720px) {
+  .contact-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    text-align: start;
+    justify-items: stretch;
+  }
+}
+
+.contact-card__avatar {
+  width: clamp(112px, 14vw, 148px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--surface), 0 0 0 5px var(--seal-line), var(--shadow-2);
+}
+
+.contact-card__title {
+  margin-block-end: var(--sp-2);
+  font-size: var(--fs-2xl);
+}
+
+.contact-card__lead {
+  max-width: 58ch;
+  color: var(--ink-2);
+  line-height: var(--lh-snug);
+}
+
+.contact-card__phone {
+  display: inline-block;
+  margin-block-start: var(--sp-3);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.contact-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-4);
+}
+
+@media (min-width: 720px) {
+  .contact-card__actions {
+    justify-content: flex-start;
+  }
+}
+
+/* Footer contact row */
+.footer__contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  width: 100%;
+  font-size: var(--fs-sm);
+}
+
+.footer__contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.footer__contact a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer__contact .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.footer__contact a[data-kind="whatsapp"] .icon {
+  color: var(--wa-icon);
+}
